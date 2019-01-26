@@ -1,0 +1,26 @@
+<annotation>
+	<folder>images</folder>
+	<filename>472.jpg</filename>
+	<path>C:\Users\Timothy\PycharmProjects\Eye_Tracking_ResNet_UE\models\images\472.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>800</width>
+		<height>600</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>eye</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>274</xmin>
+			<ymin>159</ymin>
+			<xmax>482</xmax>
+			<ymax>307</ymax>
+		</bndbox>
+	</object>
+</annotation>
