@@ -36,6 +36,8 @@ from abc import abstractmethod
 
 import tensorflow as tf
 
+from object_detection.utils import ops
+
 
 class Match(object):
   """Class to store results from the matcher.
@@ -44,7 +46,7 @@ class Match(object):
   convenient methods to query the matching results.
   """
 
-  def __init__(self, match_results):
+  def __init__(self, match_results, use_matmul_gather=False):
     """Constructs a Match object.
 
     Args:
@@ -52,6 +54,8 @@ class Match(object):
         meaning that column i is matched with row match_results[i].
         (2) match_results[i]=-1, meaning that column i is not matched.
         (3) match_results[i]=-2, meaning that column i is ignored.
+      use_matmul_gather: Use matrix multiplication based gather instead of
+        standard tf.gather. (Default: False).
 
     Raises:
       ValueError: if match_results does not have rank 1 or is not an
@@ -63,6 +67,9 @@ class Match(object):
       raise ValueError('match_results should be an int32 or int64 scalar '
                        'tensor')
     self._match_results = match_results
+    self._gather_op = tf.gather
+    if use_matmul_gather:
+      self._gather_op = ops.matmul_gather_on_zeroth_axis
 
   @property
   def match_results(self):
@@ -163,10 +170,40 @@ class Match(object):
       row_indices: int32 tensor of shape [K] with row indices.
     """
     return self._reshape_and_cast(
-        tf.gather(self._match_results, self.matched_column_indices()))
+        self._gather_op(self._match_results, self.matched_column_indices()))
 
   def _reshape_and_cast(self, t):
     return tf.cast(tf.reshape(t, [-1]), tf.int32)
+
+  def gather_based_on_match(self, input_tensor, unmatched_value,
+                            ignored_value):
+    """Gathers elements from `input_tensor` based on match results.
+
+    For columns that are matched to a row, gathered_tensor[col] is set to
+    input_tensor[match_results[col]]. For columns that are unmatched,
+    gathered_tensor[col] is set to unmatched_value. Finally, for columns that
+    are ignored gathered_tensor[col] is set to ignored_value.
+
+    Note that the input_tensor.shape[1:] must match with unmatched_value.shape
+    and ignored_value.shape
+
+    Args:
+      input_tensor: Tensor to gather values from.
+      unmatched_value: Constant tensor value for unmatched columns.
+      ignored_value: Constant tensor value for ignored columns.
+
+    Returns:
+      gathered_tensor: A tensor containing values gathered from input_tensor.
+        The shape of the gathered tensor is [match_results.shape[0]] +
+        input_tensor.shape[1:].
+    """
+    input_tensor = tf.concat(
+        [tf.stack([ignored_value, unmatched_value]),
+         tf.to_float(input_tensor)],
+        axis=0)
+    gather_indices = tf.maximum(self.match_results + 2, 0)
+    gathered_tensor = self._gather_op(input_tensor, gather_indices)
+    return gathered_tensor
 
 
 class Matcher(object):
@@ -174,7 +211,17 @@ class Matcher(object):
   """
   __metaclass__ = ABCMeta
 
-  def match(self, similarity_matrix, scope=None, **params):
+  def __init__(self, use_matmul_gather=False):
+    """Constructs a Matcher.
+
+    Args:
+      use_matmul_gather: Force constructed match objects to use matrix
+        multiplication based gather instead of standard tf.gather.
+        (Default: False).
+    """
+    self._use_matmul_gather = use_matmul_gather
+
+  def match(self, similarity_matrix, valid_rows=None, scope=None):
     """Computes matches among row and column indices and returns the result.
 
     Computes matches among the row and column indices based on the similarity
@@ -183,26 +230,28 @@ class Matcher(object):
     Args:
       similarity_matrix: Float tensor of shape [N, M] with pairwise similarity
         where higher value means more similar.
+      valid_rows: A boolean tensor of shape [N] indicating the rows that are
+        valid for matching.
       scope: Op scope name. Defaults to 'Match' if None.
-      **params: Additional keyword arguments for specific implementations of
-        the Matcher.
 
     Returns:
       A Match object with the results of matching.
     """
-    with tf.name_scope(scope, 'Match', [similarity_matrix, params]) as scope:
-      return Match(self._match(similarity_matrix, **params))
+    with tf.name_scope(scope, 'Match') as scope:
+      if valid_rows is None:
+        valid_rows = tf.ones(tf.shape(similarity_matrix)[0], dtype=tf.bool)
+      return Match(self._match(similarity_matrix, valid_rows),
+                   self._use_matmul_gather)
 
   @abstractmethod
-  def _match(self, similarity_matrix, **params):
-    """Method to be overriden by implementations.
+  def _match(self, similarity_matrix, valid_rows):
+    """Method to be overridden by implementations.
 
     Args:
       similarity_matrix: Float tensor of shape [N, M] with pairwise similarity
         where higher value means more similar.
-      **params: Additional keyword arguments for specific implementations of
-        the Matcher.
-
+      valid_rows: A boolean tensor of shape [N] indicating the rows that are
+        valid for matching.
     Returns:
       match_results: Integer tensor of shape [M]: match_results[i]>=0 means
         that column i is matched to row match_results[i], match_results[i]=-1

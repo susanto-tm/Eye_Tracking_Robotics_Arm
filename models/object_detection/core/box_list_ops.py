@@ -26,6 +26,7 @@ BoxList are retained unless documented otherwise.
 import tensorflow as tf
 
 from object_detection.core import box_list
+from object_detection.utils import ops
 from object_detection.utils import shape_utils
 
 
@@ -183,7 +184,8 @@ def prune_completely_outside_window(boxlist, window, scope=None):
     scope: name scope.
 
   Returns:
-    pruned_corners: a tensor with shape [M_out, 4] where M_out <= M_in
+    pruned_boxlist: a new BoxList with all bounding boxes partially or fully in
+      the window.
     valid_indices: a tensor with shape [M_out] indexing the valid bounding boxes
      in the input tensor.
   """
@@ -419,7 +421,8 @@ def sq_dist(boxlist1, boxlist2, scope=None):
     return sqnorm1 + tf.transpose(sqnorm2) - 2.0 * innerprod
 
 
-def boolean_mask(boxlist, indicator, fields=None, scope=None):
+def boolean_mask(boxlist, indicator, fields=None, scope=None,
+                 use_static_shapes=False, indicator_sum=None):
   """Select boxes from BoxList according to indicator and return new BoxList.
 
   `boolean_mask` returns the subset of boxes that are marked as "True" by the
@@ -435,6 +438,10 @@ def boolean_mask(boxlist, indicator, fields=None, scope=None):
       all fields are gathered from.  Pass an empty fields list to only gather
       the box coordinates.
     scope: name scope.
+    use_static_shapes: Whether to use an implementation with static shape
+      gurantees.
+    indicator_sum: An integer containing the sum of `indicator` vector. Only
+      required if `use_static_shape` is True.
 
   Returns:
     subboxlist: a BoxList corresponding to the subset of the input BoxList
@@ -447,18 +454,36 @@ def boolean_mask(boxlist, indicator, fields=None, scope=None):
       raise ValueError('indicator should have rank 1')
     if indicator.dtype != tf.bool:
       raise ValueError('indicator should be a boolean tensor')
-    subboxlist = box_list.BoxList(tf.boolean_mask(boxlist.get(), indicator))
-    if fields is None:
-      fields = boxlist.get_extra_fields()
-    for field in fields:
-      if not boxlist.has_field(field):
-        raise ValueError('boxlist must contain all specified fields')
-      subfieldlist = tf.boolean_mask(boxlist.get_field(field), indicator)
-      subboxlist.add_field(field, subfieldlist)
-    return subboxlist
+    if use_static_shapes:
+      if not (indicator_sum and isinstance(indicator_sum, int)):
+        raise ValueError('`indicator_sum` must be a of type int')
+      selected_positions = tf.to_float(indicator)
+      indexed_positions = tf.cast(
+          tf.multiply(
+              tf.cumsum(selected_positions), selected_positions),
+          dtype=tf.int32)
+      one_hot_selector = tf.one_hot(
+          indexed_positions - 1, indicator_sum, dtype=tf.float32)
+      sampled_indices = tf.cast(
+          tf.tensordot(
+              tf.to_float(tf.range(tf.shape(indicator)[0])),
+              one_hot_selector,
+              axes=[0, 0]),
+          dtype=tf.int32)
+      return gather(boxlist, sampled_indices, use_static_shapes=True)
+    else:
+      subboxlist = box_list.BoxList(tf.boolean_mask(boxlist.get(), indicator))
+      if fields is None:
+        fields = boxlist.get_extra_fields()
+      for field in fields:
+        if not boxlist.has_field(field):
+          raise ValueError('boxlist must contain all specified fields')
+        subfieldlist = tf.boolean_mask(boxlist.get_field(field), indicator)
+        subboxlist.add_field(field, subfieldlist)
+      return subboxlist
 
 
-def gather(boxlist, indices, fields=None, scope=None):
+def gather(boxlist, indices, fields=None, scope=None, use_static_shapes=False):
   """Gather boxes from BoxList according to indices and return new BoxList.
 
   By default, `gather` returns boxes corresponding to the input index list, as
@@ -473,6 +498,8 @@ def gather(boxlist, indices, fields=None, scope=None):
       all fields are gathered from.  Pass an empty fields list to only gather
       the box coordinates.
     scope: name scope.
+    use_static_shapes: Whether to use an implementation with static shape
+      gurantees.
 
   Returns:
     subboxlist: a BoxList corresponding to the subset of the input BoxList
@@ -486,13 +513,17 @@ def gather(boxlist, indices, fields=None, scope=None):
       raise ValueError('indices should have rank 1')
     if indices.dtype != tf.int32 and indices.dtype != tf.int64:
       raise ValueError('indices should be an int32 / int64 tensor')
-    subboxlist = box_list.BoxList(tf.gather(boxlist.get(), indices))
+    gather_op = tf.gather
+    if use_static_shapes:
+      gather_op = ops.matmul_gather_on_zeroth_axis
+    subboxlist = box_list.BoxList(gather_op(boxlist.get(), indices))
     if fields is None:
       fields = boxlist.get_extra_fields()
+    fields += ['boxes']
     for field in fields:
       if not boxlist.has_field(field):
         raise ValueError('boxlist must contain all specified fields')
-      subfieldlist = tf.gather(boxlist.get_field(field), indices)
+      subfieldlist = gather_op(boxlist.get_field(field), indices)
       subboxlist.add_field(field, subfieldlist)
     return subboxlist
 
@@ -584,10 +615,7 @@ def sort_by_field(boxlist, field, order=SortOrder.descend, scope=None):
         ['Incorrect field size: actual vs expected.', num_entries, num_boxes])
 
     with tf.control_dependencies([length_assert]):
-      # TODO: Remove with tf.device when top_k operation runs
-      # correctly on GPU.
-      with tf.device('/cpu:0'):
-        _, sorted_indices = tf.nn.top_k(field_to_sort, num_boxes, sorted=True)
+      _, sorted_indices = tf.nn.top_k(field_to_sort, num_boxes, sorted=True)
 
     if order == SortOrder.ascend:
       sorted_indices = tf.reverse_v2(sorted_indices, [0])
@@ -656,7 +684,7 @@ def filter_greater_than(boxlist, thresh, scope=None):
   This op keeps the collection of boxes whose corresponding scores are
   greater than the input threshold.
 
-  TODO: Change function name to filter_scores_greater_than
+  TODO(jonathanhuang): Change function name to filter_scores_greater_than
 
   Args:
     boxlist: BoxList holding N boxes.  Must contain a 'scores' field
@@ -777,7 +805,7 @@ def to_absolute_coordinates(boxlist,
                             height,
                             width,
                             check_range=True,
-                            maximum_normalized_coordinate=1.01,
+                            maximum_normalized_coordinate=1.1,
                             scope=None):
   """Converts normalized box coordinates to absolute pixel coordinates.
 
@@ -791,7 +819,7 @@ def to_absolute_coordinates(boxlist,
     width: Maximum value for width of absolute box coordinates.
     check_range: If True, checks if the coordinates are normalized or not.
     maximum_normalized_coordinate: Maximum coordinate value to be considered
-      as normalized, default to 1.01.
+      as normalized, default to 1.1.
     scope: name scope.
 
   Returns:
@@ -936,7 +964,7 @@ def box_voting(selected_boxes, pool_boxes, iou_thresh=0.5):
   iou_ = iou(selected_boxes, pool_boxes)
   match_indicator = tf.to_float(tf.greater(iou_, iou_thresh))
   num_matches = tf.reduce_sum(match_indicator, 1)
-  # TODO: Handle the case where some boxes in selected_boxes do not
+  # TODO(kbanoop): Handle the case where some boxes in selected_boxes do not
   # match to any boxes in pool_boxes. For such boxes without any matches, we
   # should return the original boxes without voting.
   match_assert = tf.Assert(
@@ -982,3 +1010,127 @@ def pad_or_clip_box_list(boxlist, num_boxes, scope=None):
           boxlist.get_field(field), num_boxes)
       subboxlist.add_field(field, subfield)
     return subboxlist
+
+
+def select_random_box(boxlist,
+                      default_box=None,
+                      seed=None,
+                      scope=None):
+  """Selects a random bounding box from a `BoxList`.
+
+  Args:
+    boxlist: A BoxList.
+    default_box: A [1, 4] float32 tensor. If no boxes are present in `boxlist`,
+      this default box will be returned. If None, will use a default box of
+      [[-1., -1., -1., -1.]].
+    seed: Random seed.
+    scope: Name scope.
+
+  Returns:
+    bbox: A [1, 4] tensor with a random bounding box.
+    valid: A bool tensor indicating whether a valid bounding box is returned
+      (True) or whether the default box is returned (False).
+  """
+  with tf.name_scope(scope, 'SelectRandomBox'):
+    bboxes = boxlist.get()
+    combined_shape = shape_utils.combined_static_and_dynamic_shape(bboxes)
+    number_of_boxes = combined_shape[0]
+    default_box = default_box or tf.constant([[-1., -1., -1., -1.]])
+
+    def select_box():
+      random_index = tf.random_uniform([],
+                                       maxval=number_of_boxes,
+                                       dtype=tf.int32,
+                                       seed=seed)
+      return tf.expand_dims(bboxes[random_index], axis=0), tf.constant(True)
+
+  return tf.cond(
+      tf.greater_equal(number_of_boxes, 1),
+      true_fn=select_box,
+      false_fn=lambda: (default_box, tf.constant(False)))
+
+
+def get_minimal_coverage_box(boxlist,
+                             default_box=None,
+                             scope=None):
+  """Creates a single bounding box which covers all boxes in the boxlist.
+
+  Args:
+    boxlist: A Boxlist.
+    default_box: A [1, 4] float32 tensor. If no boxes are present in `boxlist`,
+      this default box will be returned. If None, will use a default box of
+      [[0., 0., 1., 1.]].
+    scope: Name scope.
+
+  Returns:
+    A [1, 4] float32 tensor with a bounding box that tightly covers all the
+    boxes in the box list. If the boxlist does not contain any boxes, the
+    default box is returned.
+  """
+  with tf.name_scope(scope, 'CreateCoverageBox'):
+    num_boxes = boxlist.num_boxes()
+
+    def coverage_box(bboxes):
+      y_min, x_min, y_max, x_max = tf.split(
+          value=bboxes, num_or_size_splits=4, axis=1)
+      y_min_coverage = tf.reduce_min(y_min, axis=0)
+      x_min_coverage = tf.reduce_min(x_min, axis=0)
+      y_max_coverage = tf.reduce_max(y_max, axis=0)
+      x_max_coverage = tf.reduce_max(x_max, axis=0)
+      return tf.stack(
+          [y_min_coverage, x_min_coverage, y_max_coverage, x_max_coverage],
+          axis=1)
+
+    default_box = default_box or tf.constant([[0., 0., 1., 1.]])
+    return tf.cond(
+        tf.greater_equal(num_boxes, 1),
+        true_fn=lambda: coverage_box(boxlist.get()),
+        false_fn=lambda: default_box)
+
+
+def sample_boxes_by_jittering(boxlist,
+                              num_boxes_to_sample,
+                              stddev=0.1,
+                              scope=None):
+  """Samples num_boxes_to_sample boxes by jittering around boxlist boxes.
+
+  It is possible that this function might generate boxes with size 0. The larger
+  the stddev, this is more probable. For a small stddev of 0.1 this probability
+  is very small.
+
+  Args:
+    boxlist: A boxlist containing N boxes in normalized coordinates.
+    num_boxes_to_sample: A positive integer containing the number of boxes to
+      sample.
+    stddev: Standard deviation. This is used to draw random offsets for the
+      box corners from a normal distribution. The offset is multiplied by the
+      box size so will be larger in terms of pixels for larger boxes.
+    scope: Name scope.
+
+  Returns:
+    sampled_boxlist: A boxlist containing num_boxes_to_sample boxes in
+      normalized coordinates.
+  """
+  with tf.name_scope(scope, 'SampleBoxesByJittering'):
+    num_boxes = boxlist.num_boxes()
+    box_indices = tf.random_uniform(
+        [num_boxes_to_sample],
+        minval=0,
+        maxval=num_boxes,
+        dtype=tf.int32)
+    sampled_boxes = tf.gather(boxlist.get(), box_indices)
+    sampled_boxes_height = sampled_boxes[:, 2] - sampled_boxes[:, 0]
+    sampled_boxes_width = sampled_boxes[:, 3] - sampled_boxes[:, 1]
+    rand_miny_gaussian = tf.random_normal([num_boxes_to_sample], stddev=stddev)
+    rand_minx_gaussian = tf.random_normal([num_boxes_to_sample], stddev=stddev)
+    rand_maxy_gaussian = tf.random_normal([num_boxes_to_sample], stddev=stddev)
+    rand_maxx_gaussian = tf.random_normal([num_boxes_to_sample], stddev=stddev)
+    miny = rand_miny_gaussian * sampled_boxes_height + sampled_boxes[:, 0]
+    minx = rand_minx_gaussian * sampled_boxes_width + sampled_boxes[:, 1]
+    maxy = rand_maxy_gaussian * sampled_boxes_height + sampled_boxes[:, 2]
+    maxx = rand_maxx_gaussian * sampled_boxes_width + sampled_boxes[:, 3]
+    maxy = tf.maximum(miny, maxy)
+    maxx = tf.maximum(minx, maxx)
+    sampled_boxes = tf.stack([miny, minx, maxy, maxx], axis=1)
+    sampled_boxes = tf.maximum(tf.minimum(sampled_boxes, 1.0), 0.0)
+    return box_list.BoxList(sampled_boxes)

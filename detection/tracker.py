@@ -19,7 +19,7 @@ while True:
     cvNet.setInput(cv.dnn.blobFromImage(frame, size=(300, 300), swapRB=True, crop=False))
     cvOut = cvNet.forward()
 
-    for detection in cvOut[0,0,:,:]:
+    for detection in cvOut[0, 0, :, :]:
         score = float(detection[2])
         if score > 0.9:
             left = detection[3] * cols

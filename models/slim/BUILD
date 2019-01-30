@@ -80,7 +80,7 @@ py_binary(
     ],
 )
 
-py_binary(
+py_library(
     name = "cifar10",
     srcs = ["datasets/cifar10.py"],
     deps = [
@@ -89,7 +89,7 @@ py_binary(
     ],
 )
 
-py_binary(
+py_library(
     name = "flowers",
     srcs = ["datasets/flowers.py"],
     deps = [
@@ -98,7 +98,7 @@ py_binary(
     ],
 )
 
-py_binary(
+py_library(
     name = "imagenet",
     srcs = ["datasets/imagenet.py"],
     deps = [
@@ -107,7 +107,7 @@ py_binary(
     ],
 )
 
-py_binary(
+py_library(
     name = "mnist",
     srcs = ["datasets/mnist.py"],
     deps = [
@@ -199,14 +199,17 @@ py_library(
         ":alexnet",
         ":cifarnet",
         ":cyclegan",
+        ":i3d",
         ":inception",
         ":lenet",
-        ":mobilenet_v1",
+        ":mobilenet",
         ":nasnet",
         ":overfeat",
         ":pix2pix",
+        ":pnasnet",
         ":resnet_v1",
         ":resnet_v2",
+        ":s3dg",
         ":vgg",
     ],
 )
@@ -216,7 +219,7 @@ py_library(
     srcs = ["nets/alexnet.py"],
     srcs_version = "PY2AND3",
     deps = [
-        # "//tensorflow"
+        # "//tensorflow",
     ],
 )
 
@@ -279,6 +282,38 @@ py_test(
 )
 
 py_library(
+    name = "i3d",
+    srcs = ["nets/i3d.py"],
+    srcs_version = "PY2AND3",
+    deps = [
+        ":i3d_utils",
+        ":s3dg",
+        # "//tensorflow",
+    ],
+)
+
+py_test(
+    name = "i3d_test",
+    size = "large",
+    srcs = ["nets/i3d_test.py"],
+    shard_count = 3,
+    srcs_version = "PY2AND3",
+    deps = [
+        ":i3d",
+        # "//tensorflow",
+    ],
+)
+
+py_library(
+    name = "i3d_utils",
+    srcs = ["nets/i3d_utils.py"],
+    srcs_version = "PY2AND3",
+    deps = [
+        # "//tensorflow",
+    ],
+)
+
+py_library(
     name = "inception",
     srcs = ["nets/inception.py"],
     srcs_version = "PY2AND3",
@@ -296,7 +331,7 @@ py_library(
     srcs = ["nets/inception_utils.py"],
     srcs_version = "PY2AND3",
     deps = [
-        # "//tensorflow"
+        # "//tensorflow",
     ],
 )
 
@@ -345,7 +380,7 @@ py_library(
     srcs = ["nets/inception_resnet_v2.py"],
     srcs_version = "PY2AND3",
     deps = [
-        # "//tensorflow"
+        # "//tensorflow",
     ],
 )
 
@@ -425,7 +460,34 @@ py_library(
     srcs = ["nets/mobilenet_v1.py"],
     srcs_version = "PY2AND3",
     deps = [
-        # "//tensorflow"
+        # "//tensorflow",
+    ],
+)
+
+py_library(
+    name = "mobilenet_v2",
+    srcs = glob(["nets/mobilenet/*.py"]),
+    srcs_version = "PY2AND3",
+    deps = [
+        # "//tensorflow",
+    ],
+)
+
+py_test(
+    name = "mobilenet_v2_test",
+    srcs = ["nets/mobilenet/mobilenet_v2_test.py"],
+    srcs_version = "PY2AND3",
+    deps = [
+        ":mobilenet",
+        # "//tensorflow",
+    ],
+)
+
+py_library(
+    name = "mobilenet",
+    deps = [
+        ":mobilenet_v1",
+        ":mobilenet_v2",
     ],
 )
 
@@ -438,6 +500,28 @@ py_test(
     deps = [
         ":mobilenet_v1",
         # "//numpy",
+        # "//tensorflow",
+    ],
+)
+
+py_binary(
+    name = "mobilenet_v1_train",
+    srcs = ["nets/mobilenet_v1_train.py"],
+    deps = [
+        ":dataset_factory",
+        ":mobilenet_v1",
+        ":preprocessing_factory",
+        # "//tensorflow",
+    ],
+)
+
+py_binary(
+    name = "mobilenet_v1_eval",
+    srcs = ["nets/mobilenet_v1_eval.py"],
+    deps = [
+        ":dataset_factory",
+        ":mobilenet_v1",
+        ":preprocessing_factory",
         # "//tensorflow",
     ],
 )
@@ -485,11 +569,34 @@ py_test(
 )
 
 py_library(
+    name = "pnasnet",
+    srcs = ["nets/nasnet/pnasnet.py"],
+    srcs_version = "PY2AND3",
+    deps = [
+        ":nasnet",
+        ":nasnet_utils",
+        # "//tensorflow",
+    ],
+)
+
+py_test(
+    name = "pnasnet_test",
+    size = "large",
+    srcs = ["nets/nasnet/pnasnet_test.py"],
+    shard_count = 4,
+    srcs_version = "PY2AND3",
+    deps = [
+        ":pnasnet",
+        # "//tensorflow",
+    ],
+)
+
+py_library(
     name = "overfeat",
     srcs = ["nets/overfeat.py"],
     srcs_version = "PY2AND3",
     deps = [
-        # "//tensorflow"
+        # "//tensorflow",
     ],
 )
 
@@ -509,7 +616,7 @@ py_library(
     srcs = ["nets/pix2pix.py"],
     srcs_version = "PY2AND3",
     deps = [
-        # "//tensorflow"
+        # "//tensorflow",
     ],
 )
 
@@ -528,7 +635,7 @@ py_library(
     srcs = ["nets/resnet_utils.py"],
     srcs_version = "PY2AND3",
     deps = [
-        # "//tensorflow"
+        # "//tensorflow",
     ],
 )
 
@@ -581,11 +688,33 @@ py_test(
 )
 
 py_library(
+    name = "s3dg",
+    srcs = ["nets/s3dg.py"],
+    srcs_version = "PY2AND3",
+    deps = [
+        ":i3d_utils",
+        # "//tensorflow",
+    ],
+)
+
+py_test(
+    name = "s3dg_test",
+    size = "large",
+    srcs = ["nets/s3dg_test.py"],
+    shard_count = 3,
+    srcs_version = "PY2AND3",
+    deps = [
+        ":s3dg",
+        # "//tensorflow",
+    ],
+)
+
+py_library(
     name = "vgg",
     srcs = ["nets/vgg.py"],
     srcs_version = "PY2AND3",
     deps = [
-        # "//tensorflow"
+        # "//tensorflow",
     ],
 )
 
@@ -611,9 +740,9 @@ py_library(
 
 py_test(
     name = "nets_factory_test",
-    size = "medium",
+    size = "large",
     srcs = ["nets/nets_factory_test.py"],
-    shard_count = 2,
+    shard_count = 3,
     srcs_version = "PY2AND3",
     deps = [
         ":nets_factory",
@@ -621,8 +750,8 @@ py_test(
     ],
 )
 
-py_binary(
-    name = "train_image_classifier",
+py_library(
+    name = "train_image_classifier_lib",
     srcs = ["train_image_classifier.py"],
     deps = [
         ":dataset_factory",
@@ -634,7 +763,17 @@ py_binary(
 )
 
 py_binary(
-    name = "eval_image_classifier",
+    name = "train_image_classifier",
+    srcs = ["train_image_classifier.py"],
+    # WARNING: not supported in bazel; will be commented out by copybara.
+    # paropts = ["--compress"],
+    deps = [
+        ":train_image_classifier_lib",
+    ],
+)
+
+py_library(
+    name = "eval_image_classifier_lib",
     srcs = ["eval_image_classifier.py"],
     deps = [
         ":dataset_factory",
@@ -645,8 +784,18 @@ py_binary(
 )
 
 py_binary(
+    name = "eval_image_classifier",
+    srcs = ["eval_image_classifier.py"],
+    deps = [
+        ":eval_image_classifier_lib",
+    ],
+)
+
+py_binary(
     name = "export_inference_graph",
     srcs = ["export_inference_graph.py"],
+    # WARNING: not supported in bazel; will be commented out by copybara.
+    # paropts = ["--compress"],
     deps = [
         ":dataset_factory",
         ":nets_factory",
