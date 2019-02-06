@@ -1,18 +1,16 @@
 import numpy as np
 import os
-import six.moves.urllib as urllib
 import sys
-import tarfile
 import tensorflow as tf
-import zipfile
 
-from collections import defaultdict
-from io import StringIO
-from matplotlib import pyplot as plt
-from PIL import Image
+from imutils.video import FileVideoStream
+from imutils.video import FPS
+import imutils
+import time
 
 import cv2 as cv
-cap = cv.VideoCapture(1)
+cap = cv.VideoCapture(0)
+fps = FPS().start()
 
 # This is needed since the notebook is stored in the object_detection folder
 sys.path.append("..")
@@ -43,6 +41,8 @@ NUM_CLASSES = 1
 
 # ## Load a (frozen) Tensorflow graph into memory
 
+print("[INFO] Loading frozen Tensorflow graph...")
+
 detection_graph = tf.Graph()
 with detection_graph.as_default():
     od_graph_def = tf.GraphDef()
@@ -50,8 +50,6 @@ with detection_graph.as_default():
         serialized_graph = fid.read()
         od_graph_def.ParseFromString(serialized_graph)
         tf.import_graph_def(od_graph_def, name='')
-
-print("[INFO] Loading frozen Tensorflow graph...")
 
 # ## Loading label map
 # Label maps map indices to category names, so that when our convolution network predicts `5`, we know that this
@@ -62,9 +60,8 @@ label_map = label_map_util.load_labelmap(PATH_TO_LABELS)
 categories = label_map_util.convert_label_map_to_categories(label_map, max_num_classes=NUM_CLASSES, use_display_name=True)
 category_index = label_map_util.create_category_index(categories)
 
+
 # ## Helper Code
-
-
 def load_image_into_numpy_array(image):
     (im_width, im_height) = image.size
     return np.array(image.getdata()).reshape(
@@ -77,11 +74,15 @@ TEST_IMAGES_PATH = [os.path.join(PATH_TO_TEST_IMAGES_DIR, 'image{}.jpg'.format(i
 
 # Size in inches, of the output images
 IMAGE_SIZE = (12, 8)
-print("[INFO] Running Object Detector...")
+
+# Initialize record of coordinates
+coord = []
 with detection_graph.as_default():
     with tf.Session(graph=detection_graph) as sess:
+        print("[INFO] Running Object Detector...")
         while True:
             ret, image_np = cap.read()
+            image_np = cv.flip(image_np, 1)
             # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
             image_np_expanded = np.expand_dims(image_np, axis=0)
             image_tensor = detection_graph.get_tensor_by_name('image_tensor:0')
@@ -97,16 +98,58 @@ with detection_graph.as_default():
                 [boxes, scores, classes, num_detections],
                 feed_dict={image_tensor: image_np_expanded})
             # Visualization of the results of a detection
-            vis_utils.visualize_boxes_and_labels_on_image_array(
-                image_np,
-                np.squeeze(boxes),
-                np.squeeze(classes).astype(np.int32),
-                np.squeeze(scores),
-                category_index,
-                use_normalized_coordinates=True,
-                line_thickness=8)
+            # vis_utils.visualize_boxes_and_labels_on_image_array(
+            #     image_np,
+            #     np.squeeze(boxes),
+            #     np.squeeze(classes).astype(np.int32),
+            #     np.squeeze(scores),
+            #     category_index,
+            #     use_normalized_coordinates=True,
+            #     line_thickness=8)
 
-            cv.imshow('object detection', cv.resize(image_np, (800, 600)))
+            # Rewriting calculations found in the visualization_utils.py to obtain normalized coordinates
+            im_height, im_width = image_np.shape[:2]
+
+            # Positions are written in (ymin, xmin, ymax, xmax) and its corresponding boxes array
+            # Calculations found in visualization_utils.py under draw_bounding_box_on_image function
+            position = boxes[0][0]
+
+            """
+                position[0]: ymin of bounding box
+                position[1]: xmin of bounding box
+                position[2]: ymax of bounding box
+                position[3]: xmax of bounding box
+            """
+            # Get normalized points of bounding box
+            (left, right, top, bottom) = (position[1] * im_width, position[3] * im_width,
+                                          position[0] * im_height, position[2] * im_height)
+
+            # Get the midpoints of the detection box
+            xcenter = (int(left) + int(right)) / 2
+            ycenter = (int(top) + int(bottom)) / 2
+
+            # Append midpoint coordinates and trucnate first element if length is > 5
+            coord.append([int(xcenter), int(ycenter)])
+            if len(coord) > 5:
+                coord.pop(0)
+
+            print(coord)
+
+            cv.rectangle(image_np, (int(left), int(top)), (int(right), int(bottom)), (0, 0, 255), thickness=2)
+
+            cv.circle(image_np, (int(xcenter), int(ycenter)), radius=2, color=(0, 0, 255), thickness=2)
+
+            # cv.putText(image_np, "{}".format(scores * 100), (int(left), int(top)), cv.FONT_HERSHEY_SIMPLEX, 0.7,
+            #            (0, 0, 255))
+
+            # for i in range(len(coord) - 1):
+            #     cv.line(image_np, (coord[i][0], coord[i][1]), (coord[i+1][0], coord[i+1][1]), (0, 0, 255), thickness=2)
+
+            cv.imshow('object_detection', cv.resize(image_np, (800, 600)))
             if cv.waitKey(25) & 0xFF == ord('q'):
                 cv.destroyAllWindows()
+                fps.stop()
                 break
+            fps.update()
+
+print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
