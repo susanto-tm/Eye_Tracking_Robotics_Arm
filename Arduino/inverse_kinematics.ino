@@ -91,10 +91,12 @@ void loop() {
         Serial.println(prevElbAngle, elbowAngle);
       }
     } else if ((elbowAngle - prevTiltAngle) < 0) {
-        prevElbAngle--;
-        pwm.setPWM(1, 0, elbow_deg(prevElbAngle));
-        Serial.print("Iterate elbow angle ");
-        Serial.println(prevElbAngle, elbowAngle);
+        if (prevElbAngle != elbowAngle) {
+          prevElbAngle--;
+          pwm.setPWM(1, 0, elbow_deg(prevElbAngle));
+          Serial.print("Iterate elbow angle ");
+          Serial.println(prevElbAngle, elbowAngle);
+        }
     }
 
     if (prevTiltAngle == tiltAngle && prevElbAngle == elbowAngle) {
