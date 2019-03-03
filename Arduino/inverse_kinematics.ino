@@ -65,7 +65,7 @@ void loop() {
   Serial.println(elbowAngle);
 
   delay(2000);
-
+  // TODO convert the negative angles first before processing -- add another function to do the work(?)
   for (int i=0; i < (max(tiltAngle, elbowAngle)); i++) {
     if ((tiltAngle - prevTiltAngle) > 0) {
       if (prevTiltAngle != tiltAngle) {
