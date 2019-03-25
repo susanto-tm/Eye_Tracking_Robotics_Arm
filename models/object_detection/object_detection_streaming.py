@@ -2,6 +2,7 @@ import numpy as np
 import os
 import sys
 import tensorflow as tf
+import serial
 
 from imutils.video import FileVideoStream
 from imutils.video import FPS
@@ -11,6 +12,10 @@ import time
 import cv2 as cv
 cap = cv.VideoCapture(0)
 fps = FPS().start()
+
+print("[INFO] Initializing serial output...")
+ser = serial.Serial('COM3', baudrate=9600, timeout=2)
+time.sleep(2)
 
 # This is needed since the notebook is stored in the object_detection folder
 sys.path.append("..")
@@ -29,7 +34,7 @@ from object_detection.utils import visualization_utils as vis_utils
 # Any model exported using the `export_inference_graph.py` tool can be loaded here simply by changing `PATH_TO_CKPT` to
 # point to a new .pb file.
 
-MODEL_NAME = 'output'
+MODEL_NAME = 'output_final'
 
 # Path to frozen inference graph. This is the actual model that is used for the object detection.
 PATH_TO_CKPT = MODEL_NAME + '/frozen_inference_graph.pb'
@@ -128,8 +133,17 @@ with detection_graph.as_default():
             xcenter = (int(left) + int(right)) / 2
             ycenter = (int(top) + int(bottom)) / 2
 
-            # Append midpoint coordinates and trucnate first element if length is > 5
+            # Append midpoint coordinates and truncate first element if length is > 5
             coord.append([int(xcenter), int(ycenter)])
+
+            # xSerCoord = coord[0][0]
+            # ySerCoord = coord[0][1]
+
+            # Concatenate string of integers from each sub-array into <xxx, xxx>, using bytes() to send to serial
+            # then use substring to extract one by one in Arduino
+
+            ser.write(bytes(coord[0]))
+
             if len(coord) > 5:
                 coord.pop(0)
 
