@@ -134,18 +134,22 @@ with detection_graph.as_default():
             ycenter = (int(top) + int(bottom)) / 2
 
             # Append midpoint coordinates and truncate first element if length is > 5
-            coord.append([int(xcenter), int(ycenter)])
+            coord.insert(0, [int(xcenter), int(ycenter)])
 
             # xSerCoord = coord[0][0]
             # ySerCoord = coord[0][1]
 
             # Concatenate string of integers from each sub-array into <xxx, xxx>, using bytes() to send to serial
             # then use substring to extract one by one in Arduino
+            serialFormat = "<{0:d},{1:d}>".format(coord[0][0], coord[0][1])
+            xFormatCoord = str(int(coord[0][0]))
+            # ser.write(bytes(serialFormat, 'utf-8'))
+            ser.write(bytes(xFormatCoord, 'utf-8'))
 
-            ser.write(bytes(coord[0]))
+            print(ser.readline())
 
             if len(coord) > 5:
-                coord.pop(0)
+                coord.pop()
 
             print(coord)
 
