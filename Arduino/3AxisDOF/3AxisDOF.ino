@@ -86,7 +86,7 @@ void parseData() {
   strtokIndx = strtok(tempChars, ","); // takes tempChars as strings then searches for the string before it reaches the delimiter (comma)
   xData = atoi(strtokIndx); // takes strings up to the delimiter and changes it into int for first coordinate split
 
-  strtokIndx = strtok(NULL, ","); // continues from previous token and finds for next split
+  strtokIndx = strtok(NULL, ","); // continues from previous token and finds for next split until another delimiter if NULL, then return last piece of string
   yData = atoi(strtokIndx); // takes the continued string and changes it into int for second coordinate split
 }
 
