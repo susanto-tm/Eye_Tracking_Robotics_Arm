@@ -1,18 +1,30 @@
 import serial, time
+import random
 
-ser = serial.Serial('COM3', baudrate=9600, timeout=2)
+ser = serial.Serial('COM3', baudrate=9600, timeout=3)
 time.sleep(2)
 
-coord = [[180, 20], [29, 30]]
+coord = []
 
-xCoord = str(coord[0][0])
-yCoord = str(coord[0][1])
+# coord.insert(0, [random.randint(0, 200), random.randint(0, 200)])
+# coordinate = "<{0:d},{1:d}>".format(coord[0][0], coord[0][1])
+#
+# print(coord)
+# print(coordinate)
 
-coordinate = "<{0:d},{1:d}>".format(coord[0][0], coord[0][1])
-string = "<10"
-count = 0
+try:
+    while True:
+        coord.insert(0, [random.randint(0, 200), random.randint(0, 200)])
 
-while count < 29:
-    ser.write(bytes(coordinate, 'utf-8'))
-    print(ser.readline())
-    count +=1
+        if len(coord) > 5:
+            coord.pop()
+
+        coordinate = "<{0:d},{1:d}>".format(coord[0][0], coord[0][1])
+
+        ser.write(bytes(coordinate, 'utf-8'))
+        print(ser.readline())
+
+        time.sleep(0.1)
+
+except KeyboardInterrupt:
+    pass
