@@ -6,12 +6,6 @@ time.sleep(2)
 
 coord = []
 
-# coord.insert(0, [random.randint(0, 200), random.randint(0, 200)])
-# coordinate = "<{0:d},{1:d}>".format(coord[0][0], coord[0][1])
-#
-# print(coord)
-# print(coordinate)
-
 try:
     while True:
         coord.insert(0, [random.randint(0, 200), random.randint(0, 200)])
