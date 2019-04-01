@@ -8,7 +8,7 @@ coord = []
 
 try:
     while True:
-        coord.insert(0, [random.randint(0, 200), random.randint(0, 200)])
+        coord.insert(0, [random.randint(0, 50), random.randint(0, 10)])
 
         if len(coord) > 5:
             coord.pop()

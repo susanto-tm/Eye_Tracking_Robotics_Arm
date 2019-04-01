@@ -13,8 +13,8 @@ import cv2 as cv
 cap = cv.VideoCapture(0)
 fps = FPS().start()
 
-print("[INFO] Initializing serial output...")
-ser = serial.Serial('COM3', baudrate=9600, timeout=2)
+print("[INFO] Opening serial port...")
+ser = serial.Serial('COM3', baudrate=9600, timeout=3)
 time.sleep(2)
 
 # This is needed since the notebook is stored in the object_detection folder
@@ -74,11 +74,11 @@ def load_image_into_numpy_array(image):
 
 
 # # Detection
-PATH_TO_TEST_IMAGES_DIR = '../test_images'
-TEST_IMAGES_PATH = [os.path.join(PATH_TO_TEST_IMAGES_DIR, 'image{}.jpg'.format(i)) for i in range(1, 3)]
+# PATH_TO_TEST_IMAGES_DIR = '../test_images'
+# TEST_IMAGES_PATH = [os.path.join(PATH_TO_TEST_IMAGES_DIR, 'image{}.jpg'.format(i)) for i in range(1, 3)]
 
-# Size in inches, of the output images
-IMAGE_SIZE = (12, 8)
+# # Size in inches, of the output images
+# IMAGE_SIZE = (12, 8)
 
 # Initialize record of coordinates
 coord = []
@@ -87,7 +87,7 @@ with detection_graph.as_default():
         print("[INFO] Running Object Detector...")
         while True:
             ret, image_np = cap.read()
-            image_np = cv.flip(image_np, 1)
+            image_np = cv.flip(image_np, 0)
             # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
             image_np_expanded = np.expand_dims(image_np, axis=0)
             image_tensor = detection_graph.get_tensor_by_name('image_tensor:0')
@@ -142,11 +142,10 @@ with detection_graph.as_default():
             # Concatenate string of integers from each sub-array into <xxx, xxx>, using bytes() to send to serial
             # then use substring to extract one by one in Arduino
             serialFormat = "<{0:d},{1:d}>".format(coord[0][0], coord[0][1])
-            xFormatCoord = str(int(coord[0][0]))
-            # ser.write(bytes(serialFormat, 'utf-8'))
-            ser.write(bytes(xFormatCoord, 'utf-8'))
 
-            print(ser.readline())
+            ser.write(bytes(serialFormat, 'utf-8'))
+
+            time.sleep(0.1)
 
             if len(coord) > 5:
                 coord.pop()
