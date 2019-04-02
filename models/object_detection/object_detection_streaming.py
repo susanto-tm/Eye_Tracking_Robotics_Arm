@@ -14,8 +14,8 @@ cap = cv.VideoCapture(0)
 fps = FPS().start()
 
 print("[INFO] Opening serial port...")
-ser = serial.Serial('COM3', baudrate=9600, timeout=3)
-time.sleep(2)
+ser = serial.Serial('COM3', baudrate=19200, timeout=5)
+time.sleep(5)
 
 # This is needed since the notebook is stored in the object_detection folder
 sys.path.append("..")
@@ -144,6 +144,7 @@ with detection_graph.as_default():
             serialFormat = "<{0:d},{1:d}>".format(coord[0][0], coord[0][1])
 
             ser.write(bytes(serialFormat, 'utf-8'))
+            print(ser.readline())
 
             time.sleep(0.1)
 

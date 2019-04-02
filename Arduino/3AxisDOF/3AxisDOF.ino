@@ -8,6 +8,9 @@
 // calibrate coordinates for arm based on eye detection
 const int digitalPin1 = 4;
 const int digitalPin2 = 2;
+
+int xMin, xMax, yMin, yMax;
+
 int countConfirm = 0;
 int calibrationConfirm = 0;
 int calibrationReset = 0;
@@ -39,7 +42,7 @@ boolean newData = false;
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(9600);
+  Serial.begin(19200);
   Serial.println("Ready");
 
   pwm.begin();
@@ -56,13 +59,18 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   if (calibrationState == 0) {
-    Serial.println("Starting Calibration...");
     receiveStartEndMarker();
+    calibrationConfirm = digitalRead(digitalPin1);
+    calibrationReset = digitalRead(digitalPin2);
     if (newData == true) {
       strcpy(tempChars, receivedChars);
       parseData();
-      showData();
-      calibrateCoordinates();
+      // TODO try another method to confirm button press and saved (using LED)
+      if (calibrationConfirm == LOW || calibrationReset == LOW) {
+        calibrateCoordinates(calibrationConfirm, calibrationReset, xData, yData);
+      }
+      
+      //calibrateCoordinates();
       newData = false;
     }
   }
@@ -92,63 +100,69 @@ void loop() {
   }
 }
 
-void calibrateCoordinates() {
-    calibrationConfirm = digitalRead(digitalPin1);
-    calibrationReset = digitalRead(digitalPin2);
+void calibrateCoordinates(int calibrateConfirm, int calibrateReset, int xData, int yData) {
+    Serial.println("Coordinates sent");
+    delay(2000);
 
-    while (true) {
-      if (calibrationConfirm == LOW) {
-        countConfirm++;
-        delay(150);
-        if (countConfirm == 1) {
-          Serial.println("Look at right coordinate");
-        }
-        // next press will confirm the coordinates and prompt next coordinate
-        else if (countConfirm == 2) {
-          int xMin = xData;
-          countConfirm++;
-        }
-        // save coordinates in previous confirm so it does not save the wrong coordinates in the wrong variable
-        else if (countConfirm == 3) {
-          Serial.println("Look at left coordinate");
-        }
-        else if (countConfirm == 4) {
-          int xMax = xData;
-          countConfirm++;
-        }
-        else if (countConfirm == 5) {
-          Serial.println("Look at bottom coordinate");
-        }
-        else if (countConfirm == 6) {
-          int yMin = yData;
-          countConfirm++;
-          
-        }
-        else if (countConfirm == 7) {
-          Serial.println("Look at top coordinate");
-        }
-        else if (countConfirm == 8) {
-          int yMax = yData;
-          countConfirm++;
-          
-        }
-        else if (countConfirm == 9) {
-          Serial.println("Wait for calibration mapping...");
-          calibrationState = 1;
-          state = 1;
-        }
+    // Code will automatically break after loop to get new coordinates
+    if (calibrationConfirm == LOW) {
+      countConfirm++;
+      // Button pressed in void loop so once serial is shown it only shows once and goes to countConfirm = 2 on next press
+      if (countConfirm == 1) {
+        Serial.println("Starting Calibration...");
+        Serial.println("Press button to confirm calibration");
       }
-      // reset countConfirm to 0 to reset the 
-      else if (calibrationReset == LOW) {
-        countConfirm = 1;
-        Serial.println("Resetting Serial...");
-        delay(150);
+      // Instruction to look at right coordinate is seen and when next button is pressed, it will save the coordinate and not reupdate
+      else if (countConfirm == 2) {
+        Serial.println("Look at the right coordinate.");
+        Serial.println("Press the button to confirm");
       }
-      // if button is not pressed, break the loop and get new coordinates
-      else {
-        break;
+      else if (countConfirm == 3) {
+        xMin = xData;
+        Serial.println(xMin);
+        Serial.println("Minimum x coordinate saved. Press the button to continue");
       }
-   }
+      else if (countConfirm == 4) {
+        Serial.println("Look at the left coordinate");
+        Serial.println("Press the button to confirm");
+      }
+      else if (countConfirm == 5) {
+        xMax = xData;
+        Serial.println(xMax);
+        Serial.println("Maximum x coordinate saved. Press the button to continue");
+      }
+      else if (countConfirm == 6) {
+        Serial.println("Look at the bottom coordinate");
+        Serial.println("Press the button to confirm");
+      }
+      else if (countConfirm == 7) {
+        yMin = yData;
+        Serial.println(yMin);
+        Serial.println("Minimum y coordinate saved. Press the button to continue");
+      }
+      else if (countConfirm == 8) {
+        Serial.println("Look at the top coordinate");
+        Serial.println("Press the button to confirm");
+      }
+      // just for debugging
+      else if (countConfirm == 9) {
+        yMax = yData;
+        Serial.println(yMax);
+        Serial.println("Maximum y coordinate saved. Press the button to continue");
+        state = 1;
+        calibrationState = 1;
+      }
+//    else if (countConfirm == 8) {
+//      Serial.println("Calibration Complete wait for coordinate mapping");
+//      state = 1;
+//      calibrationState = 1;
+//    }
+    }
+    else if (calibrationReset == LOW) {
+      countConfirm = 0;
+      Serial.println("Resetting Calibration...");
+      delay(150);
+    }
 }
 
 void receiveStartEndMarker() {
