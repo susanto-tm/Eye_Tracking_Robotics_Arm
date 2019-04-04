@@ -3,6 +3,7 @@ import os
 import sys
 import tensorflow as tf
 import serial
+import msvcrt
 
 from imutils.video import FileVideoStream
 from imutils.video import FPS
@@ -14,7 +15,7 @@ cap = cv.VideoCapture(0)
 fps = FPS().start()
 
 print("[INFO] Opening serial port...")
-ser = serial.Serial('COM3', baudrate=19200, timeout=5)
+# ser = serial.Serial('COM3', baudrate=19200, timeout=5)
 time.sleep(5)
 
 # This is needed since the notebook is stored in the object_detection folder
@@ -72,7 +73,6 @@ def load_image_into_numpy_array(image):
     return np.array(image.getdata()).reshape(
         (im_height, im_width, 3)).astype(np.uint8)
 
-
 # # Detection
 # PATH_TO_TEST_IMAGES_DIR = '../test_images'
 # TEST_IMAGES_PATH = [os.path.join(PATH_TO_TEST_IMAGES_DIR, 'image{}.jpg'.format(i)) for i in range(1, 3)]
@@ -82,6 +82,9 @@ def load_image_into_numpy_array(image):
 
 # Initialize record of coordinates
 coord = []
+calibration_stage = 0
+calibration_state = 0
+save_calibration = []
 with detection_graph.as_default():
     with tf.Session(graph=detection_graph) as sess:
         print("[INFO] Running Object Detector...")
@@ -136,22 +139,46 @@ with detection_graph.as_default():
             # Append midpoint coordinates and truncate first element if length is > 5
             coord.insert(0, [int(xcenter), int(ycenter)])
 
-            # xSerCoord = coord[0][0]
-            # ySerCoord = coord[0][1]
-
             # Concatenate string of integers from each sub-array into <xxx, xxx>, using bytes() to send to serial
-            # then use substring to extract one by one in Arduino
+            # then parse data in Arduino
             serialFormat = "<{0:d},{1:d}>".format(coord[0][0], coord[0][1])
 
-            ser.write(bytes(serialFormat, 'utf-8'))
-            print(ser.readline())
+            if calibration_state == 0 and msvcrt.kbhit():
+                key = ord(msvcrt.getch())
+                if key == 99:
+                    if calibration_stage == 0 or calibration_stage == 1:
+                        save_calibration.append(coord[0][0])
+                        print(save_calibration)
+                    elif calibration_stage == 2 or calibration_stage == 3:
+                        save_calibration.append(coord[0][1])
+                        print(save_calibration)
+                    elif calibration_stage == 4:
+                        print(save_calibration)
+                        serial_calibration_format = "<{0:d},{1:d},{2:d},{3:d}>".format(save_calibration[0],
+                                                                                       save_calibration[1],
+                                                                                       save_calibration[2],
+                                                                                       save_calibration[3])
+                        print(serial_calibration_format)
+                        calibration_state = 1
 
-            time.sleep(0.1)
+                    calibration_stage += 1
+
+            elif calibration_state == 1:
+                # ser.write(bytes(serialFormat, 'utf-8'))
+                # print(ser.readline())
+                print(coord)
+
+            # elif (calibration_state == 0 or calibration_state == 1) and (msvcrt.kbhit()):
+            #     key = ord(msvcrt.getch())
+            #     if key == 114:
+            #         if calibration_state == 1:
+            #             calibration_state = 0
+            #         calibration_stage = 0
 
             if len(coord) > 5:
                 coord.pop()
 
-            print(coord)
+            time.sleep(0.1)
 
             cv.rectangle(image_np, (int(left), int(top)), (int(right), int(bottom)), (0, 0, 255), thickness=2)
 
@@ -161,13 +188,21 @@ with detection_graph.as_default():
             #            (0, 0, 255))
 
             # for i in range(len(coord) - 1):
-            #     cv.line(image_np, (coord[i][0], coord[i][1]), (coord[i+1][0], coord[i+1][1]), (0, 0, 255), thickness=2)
+            #    cv.line(image_np, (coord[i][0], coord[i][1]), (coord[i+1][0], coord[i+1][1]), (0, 0, 255), thickness=2)
 
             cv.imshow('object_detection', cv.resize(image_np, (800, 600)))
-            if cv.waitKey(25) & 0xFF == ord('q'):
+            if cv.waitKey(25) & 0xFF == ord('r'):
+                if calibration_state == 0 or calibration_state == 1:
+                    if calibration_state == 1:
+                        calibration_state = 0
+                    calibration_stage = 0
+                    save_calibration = []
+
+            elif cv.waitKey(25) & 0xFF == ord('q'):
                 cv.destroyAllWindows()
                 fps.stop()
                 break
+
             fps.update()
 
 print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
