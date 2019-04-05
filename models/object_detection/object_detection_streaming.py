@@ -15,7 +15,7 @@ cap = cv.VideoCapture(0)
 fps = FPS().start()
 
 print("[INFO] Opening serial port...")
-# ser = serial.Serial('COM3', baudrate=19200, timeout=5)
+ser = serial.Serial('COM3', baudrate=19200, timeout=5)
 time.sleep(5)
 
 # This is needed since the notebook is stored in the object_detection folder
@@ -85,6 +85,8 @@ coord = []
 calibration_stage = 0
 calibration_state = 0
 save_calibration = []
+calibration_count = 0
+
 with detection_graph.as_default():
     with tf.Session(graph=detection_graph) as sess:
         print("[INFO] Running Object Detector...")
@@ -136,7 +138,7 @@ with detection_graph.as_default():
             xcenter = (int(left) + int(right)) / 2
             ycenter = (int(top) + int(bottom)) / 2
 
-            # Append midpoint coordinates and truncate first element if length is > 5
+            # Append midpoint coordinates to front of list
             coord.insert(0, [int(xcenter), int(ycenter)])
 
             # Concatenate string of integers from each sub-array into <xxx, xxx>, using bytes() to send to serial
@@ -159,22 +161,34 @@ with detection_graph.as_default():
                                                                                        save_calibration[2],
                                                                                        save_calibration[3])
                         print(serial_calibration_format)
-                        calibration_state = 1
+                        ser.write(bytes(serial_calibration_format, 'utf-8'))
 
-                    calibration_stage += 1
+                        while calibration_count < 10:
+                            # data = ser.readline(9999)
+                            print(ser.readline())
+                            calibration_count += 1
+                            # if key == 115:
+                            #     break
+
+                        # if ser.readline(9999).startswith(bytes("Calibration", 'utf-8')):
+                        #     while True:
+                        #         print(ser.readline())
+                        #
+                        #         if ser.readline(9999).startswith(bytes("yMax", 'utf-8')):
+                        #             break
+                            # calibration_state = 1
+
+                    if calibration_stage < 4:
+                        calibration_stage += 1
+                    elif calibration_stage == 4 and calibration_state == 0:
+                        calibration_state = 1
 
             elif calibration_state == 1:
                 # ser.write(bytes(serialFormat, 'utf-8'))
                 # print(ser.readline())
                 print(coord)
 
-            # elif (calibration_state == 0 or calibration_state == 1) and (msvcrt.kbhit()):
-            #     key = ord(msvcrt.getch())
-            #     if key == 114:
-            #         if calibration_state == 1:
-            #             calibration_state = 0
-            #         calibration_stage = 0
-
+            # Truncate last element if length is > 5
             if len(coord) > 5:
                 coord.pop()
 
@@ -193,9 +207,9 @@ with detection_graph.as_default():
             cv.imshow('object_detection', cv.resize(image_np, (800, 600)))
             if cv.waitKey(25) & 0xFF == ord('r'):
                 if calibration_state == 0 or calibration_state == 1:
-                    if calibration_state == 1:
-                        calibration_state = 0
+                    calibration_state = 0
                     calibration_stage = 0
+                    calibration_count = 0
                     save_calibration = []
 
             elif cv.waitKey(25) & 0xFF == ord('q'):

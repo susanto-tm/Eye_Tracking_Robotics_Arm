@@ -29,7 +29,7 @@ int prevTiltAngle, prevElbAngle, prevWriAngle, prevBaseAngle;
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
 // Receive byte string from python
-const byte numChars = 12;
+const byte numChars = 32;
 char receivedChars[numChars];
 char tempChars[numChars];
 
@@ -48,10 +48,6 @@ void setup() {
   pwm.begin();
   pwm.setPWMFreq(60);
 
-  // digital input for button
-  pinMode(digitalPin1, INPUT);
-  pinMode(digitalPin2, INPUT);
-
   delay(5000);
 
 }
@@ -60,15 +56,11 @@ void loop() {
   // put your main code here, to run repeatedly:
   if (calibrationState == 0) {
     receiveStartEndMarker();
-    calibrationConfirm = digitalRead(digitalPin1);
-    calibrationReset = digitalRead(digitalPin2);
     if (newData == true) {
       strcpy(tempChars, receivedChars);
-      parseData();
-      // TODO try another method to confirm button press and saved (using LED)
-      if (calibrationConfirm == LOW || calibrationReset == LOW) {
-        calibrateCoordinates(calibrationConfirm, calibrationReset, xData, yData);
-      }
+      parseCalibrationData();
+
+      showCalibrationData();
       
       //calibrateCoordinates();
       newData = false;
@@ -100,69 +92,25 @@ void loop() {
   }
 }
 
-void calibrateCoordinates(int calibrateConfirm, int calibrateReset, int xData, int yData) {
-    Serial.println("Coordinates sent");
-    delay(2000);
+void showCalibrationData() {
+  Serial.println("Calibration results");
+  
+  Serial.print("xMin is: ");
+  Serial.println(xMin);
 
-    // Code will automatically break after loop to get new coordinates
-    if (calibrationConfirm == LOW) {
-      countConfirm++;
-      // Button pressed in void loop so once serial is shown it only shows once and goes to countConfirm = 2 on next press
-      if (countConfirm == 1) {
-        Serial.println("Starting Calibration...");
-        Serial.println("Press button to confirm calibration");
-      }
-      // Instruction to look at right coordinate is seen and when next button is pressed, it will save the coordinate and not reupdate
-      else if (countConfirm == 2) {
-        Serial.println("Look at the right coordinate.");
-        Serial.println("Press the button to confirm");
-      }
-      else if (countConfirm == 3) {
-        xMin = xData;
-        Serial.println(xMin);
-        Serial.println("Minimum x coordinate saved. Press the button to continue");
-      }
-      else if (countConfirm == 4) {
-        Serial.println("Look at the left coordinate");
-        Serial.println("Press the button to confirm");
-      }
-      else if (countConfirm == 5) {
-        xMax = xData;
-        Serial.println(xMax);
-        Serial.println("Maximum x coordinate saved. Press the button to continue");
-      }
-      else if (countConfirm == 6) {
-        Serial.println("Look at the bottom coordinate");
-        Serial.println("Press the button to confirm");
-      }
-      else if (countConfirm == 7) {
-        yMin = yData;
-        Serial.println(yMin);
-        Serial.println("Minimum y coordinate saved. Press the button to continue");
-      }
-      else if (countConfirm == 8) {
-        Serial.println("Look at the top coordinate");
-        Serial.println("Press the button to confirm");
-      }
-      // just for debugging
-      else if (countConfirm == 9) {
-        yMax = yData;
-        Serial.println(yMax);
-        Serial.println("Maximum y coordinate saved. Press the button to continue");
-        state = 1;
-        calibrationState = 1;
-      }
-//    else if (countConfirm == 8) {
-//      Serial.println("Calibration Complete wait for coordinate mapping");
-//      state = 1;
-//      calibrationState = 1;
-//    }
-    }
-    else if (calibrationReset == LOW) {
-      countConfirm = 0;
-      Serial.println("Resetting Calibration...");
-      delay(150);
-    }
+  Serial.print("xMax is: ");
+  Serial.println(xMax);
+
+  Serial.print("yMin is: ");
+  Serial.println(yMin);
+
+  Serial.print("yMax is: ");
+  Serial.println(yMax);
+
+  Serial.println("End");
+
+  calibrationState = 0;
+  state = 0;
 }
 
 void receiveStartEndMarker() {
@@ -195,6 +143,26 @@ void receiveStartEndMarker() {
       receiveProgress = true; // skips the startMarker when collecting bytes begins
     }
   }
+}
+
+void parseCalibrationData() {
+  char* strtokIndx;
+
+  Serial.println(tempChars);
+
+  strtokIndx = strtok(tempChars, ",");
+  xMin = atoi(strtokIndx);
+
+  strtokIndx = strtok(NULL, ",");
+  xMax = atoi(strtokIndx);
+
+  strtokIndx = strtok(NULL, ",");
+  yMin = atoi(strtokIndx);
+
+  Serial.println(strtokIndx);
+
+  strtokIndx = strtok(NULL, ",");
+  yMax = atoi(strtokIndx);
 }
 
 void parseData() {
