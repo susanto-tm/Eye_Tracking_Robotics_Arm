@@ -6,16 +6,9 @@
 #define SERVOMAX 440
 
 // calibrate coordinates for arm based on eye detection
-const int digitalPin1 = 4;
-const int digitalPin2 = 2;
-
 int xMin, xMax, yMin, yMax;
-
-int countConfirm = 0;
-int calibrationConfirm = 0;
-int calibrationReset = 0;
-
 int calibrationState = 0;
+int xMinCoord, xMaxCoord, yMinCoord, yMaxCoord;
 
 // initialize length of joins for arm
 int lengths[] = {100, 130, 180};
@@ -54,19 +47,7 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  if (calibrationState == 0) {
-    receiveStartEndMarker();
-    if (newData == true) {
-      strcpy(tempChars, receivedChars);
-      parseCalibrationData();
-
-      showCalibrationData();
-      
-      //calibrateCoordinates();
-      newData = false;
-    }
-  }
-  if (state == 1) {
+  if (state == 0) {
     prevTiltAngle = 0;
     prevElbAngle = 0;
     prevWriAngle = 0;
@@ -76,10 +57,22 @@ void loop() {
     Serial.println("Initialized");
 
     state = 1;
-    calibrationState = 2;
+    calibrationState = 1;
     delay(2000);
   }
-  if (calibrationState == 2) {
+  else if (calibrationState == 1) {
+    receiveStartEndMarker();
+    if (newData == true) {
+      strcpy(tempChars, receivedChars);
+      parseCalibrationData();
+
+      showCalibrationData();
+      
+      newData = false;
+      calibrationState = 2;
+    }
+  }
+  else if (calibrationState == 2) {
    receiveStartEndMarker();
    if (newData == true) {
     strcpy(tempChars, receivedChars); // creates a copy of receivedChars since strtok() will
@@ -109,8 +102,7 @@ void showCalibrationData() {
 
   Serial.println("End");
 
-  calibrationState = 0;
-  state = 0;
+  calibrationState = 2;
 }
 
 void receiveStartEndMarker() {
@@ -222,7 +214,7 @@ void initializeStart(int &xCoord, int &yCoord, int &wCoord, int &zCoord) {
   yCoord = 0;
   zCoord = 0;
 
-  // fabrik2D.solve2(xCoord, yCoord, zCoord, -M_PI/4.0, lengths);
+  fabrik2D.solve2(xCoord, yCoord, zCoord, -M_PI/4.0, lengths);
 
   int tAngle = fabrik2D.getAngle(0) * 57296/1000;
   int eAngle = fabrik2D.getAngle(1) * 57296/1000;
@@ -244,14 +236,18 @@ void moveArm() {
   Serial.println("Coordinates received and processing...");
   int y = 5;
   
-  fabrik2D.solve2(yData, y, xData, -M_PI/4.0, lengths);
+  // Change xMinCoord and xMaxCoord **Z axis change on robot** to calibrated locations on the actual robot using forward kinematics to find them
+  int xCalibrated = map(xData, xMin, xMax, xMinCoord, xMaxCoord);
+
+  // Change yMinCoord and yMaxCoord **X axis change on robot** to calibrated locations on the actual robot using forward kinematics to find them
+  int yCalibrated = map(yData, yMin, yMax, yMinCoord, yMaxCoord);
+  
+  fabrik2D.solve2(yCalibrated, y, xCalibrated, -M_PI/4.0, lengths);
 
   int tiltAngle = fabrik2D.getAngle(0) * 57296/1000;
-  // int elbowAngle = fabrik2D.getAngle(1) * 57296/1000;
+  int elbowAngle = fabrik2D.getAngle(1) * 57296/1000;
   int wristAngle = fabrik2D.getAngle(2) * 57296/1000;
   int baseAngle = fabrik2D.getBaseAngle() * 57926/1000;
-
-  int elbowAngle = 0;
   
   Serial.print("Base Angle is: ");
   Serial.println(baseAngle);

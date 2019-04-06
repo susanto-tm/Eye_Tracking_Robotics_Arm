@@ -73,6 +73,7 @@ def load_image_into_numpy_array(image):
     return np.array(image.getdata()).reshape(
         (im_height, im_width, 3)).astype(np.uint8)
 
+
 # # Detection
 # PATH_TO_TEST_IMAGES_DIR = '../test_images'
 # TEST_IMAGES_PATH = [os.path.join(PATH_TO_TEST_IMAGES_DIR, 'image{}.jpg'.format(i)) for i in range(1, 3)]
@@ -164,19 +165,8 @@ with detection_graph.as_default():
                         ser.write(bytes(serial_calibration_format, 'utf-8'))
 
                         while calibration_count < 10:
-                            # data = ser.readline(9999)
                             print(ser.readline())
                             calibration_count += 1
-                            # if key == 115:
-                            #     break
-
-                        # if ser.readline(9999).startswith(bytes("Calibration", 'utf-8')):
-                        #     while True:
-                        #         print(ser.readline())
-                        #
-                        #         if ser.readline(9999).startswith(bytes("yMax", 'utf-8')):
-                        #             break
-                            # calibration_state = 1
 
                     if calibration_stage < 4:
                         calibration_stage += 1
@@ -184,8 +174,8 @@ with detection_graph.as_default():
                         calibration_state = 1
 
             elif calibration_state == 1:
-                # ser.write(bytes(serialFormat, 'utf-8'))
-                # print(ser.readline())
+                ser.write(bytes(serialFormat, 'utf-8'))
+                print(ser.readline())
                 print(coord)
 
             # Truncate last element if length is > 5
@@ -206,10 +196,8 @@ with detection_graph.as_default():
 
             cv.imshow('object_detection', cv.resize(image_np, (800, 600)))
             if cv.waitKey(25) & 0xFF == ord('r'):
-                if calibration_state == 0 or calibration_state == 1:
-                    calibration_state = 0
-                    calibration_stage = 0
-                    calibration_count = 0
+                if calibration_state == 0:
+                    calibration_state, calibration_stage, calibration_count = 0, 0, 0
                     save_calibration = []
 
             elif cv.waitKey(25) & 0xFF == ord('q'):
