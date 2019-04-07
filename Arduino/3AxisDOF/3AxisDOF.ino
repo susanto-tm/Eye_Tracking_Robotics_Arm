@@ -3,12 +3,19 @@
 
 // define main constant variables for servo PWM
 #define SERVOMIN 130
-#define SERVOMAX 440
+#define SERVOMAX 510
 
 // calibrate coordinates for arm based on eye detection
 int xMin, xMax, yMin, yMax;
 int calibrationState = 0;
-int xMinCoord, xMaxCoord, yMinCoord, yMaxCoord;
+
+// xMin and xMax are defined as maximum z coordinates in arm
+int xMinCoord = 0;
+int xMaxCoord = 265;
+
+// yMin and yMax are defined as maximum x coordinates in arm
+int yMinCoord = 150;
+int yMaxCoord = 0; // fix this part
 
 // initialize length of joins for arm
 int lengths[] = {100, 130, 180};
@@ -185,7 +192,7 @@ uint16_t tilt_deg(int degree) {
 
 uint16_t elbow_deg(int degree) {
   const int MIN = 200;
-  const int MAX = 500;
+  const int MAX = 550;
 
   uint16_t pulse = map(degree, 0, 180, MIN, MAX);
 
@@ -193,8 +200,8 @@ uint16_t elbow_deg(int degree) {
 }
 
 uint16_t wrist_deg(int degree) {
-  const int MIN = 200;
-  const int MAX = 500;
+  const int MIN = 500;
+  const int MAX = 140;
 
   uint16_t pulse = map(degree, 0, 180, MIN, MAX);
 
@@ -202,8 +209,8 @@ uint16_t wrist_deg(int degree) {
 }
 
 uint16_t base_deg(int degree) {
-  const int MIN = 120;
-  const int MAX = 560;
+  const int MIN = 160;
+  const int MAX = 480;
   uint16_t pulse = map(degree, 0, 180, MIN, MAX);
 
   return pulse;
