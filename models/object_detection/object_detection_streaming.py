@@ -11,7 +11,7 @@ import imutils
 import time
 
 import cv2 as cv
-cap = cv.VideoCapture(0)
+cap = cv.VideoCapture(1)
 fps = FPS().start()
 
 print("[INFO] Opening serial port...")

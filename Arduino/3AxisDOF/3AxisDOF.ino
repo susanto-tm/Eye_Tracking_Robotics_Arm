@@ -15,7 +15,7 @@ int xMaxCoord = 265;
 
 // yMin and yMax are defined as maximum x coordinates in arm
 int yMinCoord = 150;
-int yMaxCoord = 0; // fix this part
+int yMaxCoord = 410;
 
 // initialize length of joins for arm
 int lengths[] = {100, 130, 180};
@@ -85,7 +85,7 @@ void loop() {
     strcpy(tempChars, receivedChars); // creates a copy of receivedChars since strtok() will
                                       // replace commas with \0
     parseData(); // parse incoming bytes data as coordinates
-    showData();
+    // showData();
     moveArm(); // calculate necessary inverse kinematics
     newData = false; // process new coordinates
     } 
@@ -200,8 +200,8 @@ uint16_t elbow_deg(int degree) {
 }
 
 uint16_t wrist_deg(int degree) {
-  const int MIN = 500;
-  const int MAX = 140;
+  const int MIN = 130;
+  const int MAX = 530;
 
   uint16_t pulse = map(degree, 0, 180, MIN, MAX);
 
@@ -217,21 +217,21 @@ uint16_t base_deg(int degree) {
 }
 
 void initializeStart(int &xCoord, int &yCoord, int &wCoord, int &zCoord) {
-  xCoord = 0;
-  yCoord = 0;
-  zCoord = 0;
+  xCoord = 150;
+  yCoord = 10;
+  zCoord = 50;
 
-  fabrik2D.solve2(xCoord, yCoord, zCoord, -M_PI/4.0, lengths);
+  fabrik2D.solve2(xCoord, yCoord, zCoord, lengths);
 
   int tAngle = fabrik2D.getAngle(0) * 57296/1000;
   int eAngle = fabrik2D.getAngle(1) * 57296/1000;
-  int wAngle = fabrik2D.getAngle(2) * 57296/1000;
+  int wAngle = fabrik2D.getAngle(2) * -57296/1000;
   int bAngle = fabrik2D.getBaseAngle() * 57296/1000;
 
-  pwm.setPWM(0, 0, tilt_deg(90));
-  pwm.setPWM(1, 0, elbow_deg(0));
+  pwm.setPWM(0, 0, tilt_deg(tAngle));
+  pwm.setPWM(1, 0, elbow_deg(eAngle));
   pwm.setPWM(2, 0, wrist_deg(wAngle));
-  pwm.setPWM(3, 0, base_deg(90));
+  pwm.setPWM(3, 0, base_deg(bAngle));
 
   xCoord = tAngle;
   yCoord = eAngle;
@@ -240,8 +240,8 @@ void initializeStart(int &xCoord, int &yCoord, int &wCoord, int &zCoord) {
 }
 
 void moveArm() {
-  Serial.println("Coordinates received and processing...");
-  int y = 5;
+  // Serial.println("Coordinates received and processing...");
+  int y = 10;
   
   // Change xMinCoord and xMaxCoord **Z axis change on robot** to calibrated locations on the actual robot using forward kinematics to find them
   int xCalibrated = map(xData, xMin, xMax, xMinCoord, xMaxCoord);
@@ -249,15 +249,15 @@ void moveArm() {
   // Change yMinCoord and yMaxCoord **X axis change on robot** to calibrated locations on the actual robot using forward kinematics to find them
   int yCalibrated = map(yData, yMin, yMax, yMinCoord, yMaxCoord);
   
-  fabrik2D.solve2(yCalibrated, y, xCalibrated, -M_PI/4.0, lengths);
+  fabrik2D.solve2(yCalibrated, y, xCalibrated, lengths);
 
   int tiltAngle = fabrik2D.getAngle(0) * 57296/1000;
   int elbowAngle = fabrik2D.getAngle(1) * 57296/1000;
-  int wristAngle = fabrik2D.getAngle(2) * 57296/1000;
+  int wristAngle = fabrik2D.getAngle(2) * -57296/1000; // turn negative to positive since it is moving anti-clockwise already
   int baseAngle = fabrik2D.getBaseAngle() * 57926/1000;
   
-  Serial.print("Base Angle is: ");
-  Serial.println(baseAngle);
+  // Serial.print("Base Angle is: ");
+  // Serial.println(baseAngle);
 
   for (int i=0; i < max(max(tiltAngle, elbowAngle), max(wristAngle, baseAngle)); i++) {
     //Tilt Angle always positive
