@@ -177,7 +177,7 @@ with detection_graph.as_default():
                 ser.write(bytes(serialFormat, 'utf-8'))
                 print(ser.readline())
                 print(coord)
-
+            # TODO <0, 0,> exception in Arduino for blinking to be ignored
             # Truncate last element if length is > 5
             if len(coord) > 5:
                 coord.pop()
