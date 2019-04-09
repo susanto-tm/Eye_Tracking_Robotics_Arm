@@ -11,7 +11,7 @@ import imutils
 import time
 
 import cv2 as cv
-cap = cv.VideoCapture(1)
+cap = cv.VideoCapture(0 + cv.CAP_DSHOW)
 fps = FPS().start()
 
 print("[INFO] Opening serial port...")
@@ -142,8 +142,7 @@ with detection_graph.as_default():
 
             # Append midpoint coordinates to front of list
             # Ignore coordinate <0, 0> for non-existing bounding box or a blink recorded by the frame
-            if xcenter and ycenter != 0:
-                coord.insert(0, [int(xcenter), int(ycenter)])
+            coord.insert(0, [int(xcenter), int(ycenter)])
 
             # Concatenate string of integers from each sub-array into <xxx, xxx>, using bytes() to send to serial
             # then parse data in Arduino
@@ -177,15 +176,16 @@ with detection_graph.as_default():
                         calibration_state = 1
 
             elif calibration_state == 1:
-                ser.write(bytes(serialFormat, 'utf-8'))
-                print(ser.readline())
-                print(coord)
+                if serialFormat != "<0,0>":
+                    ser.write(bytes(serialFormat, 'utf-8'))
+                    print(ser.readline())
+                    print(coord)
 
             # Truncate last element if length is > 5. To clear up buffer and memory.
             if len(coord) > 5:
                 coord.pop()
 
-            time.sleep(0.1)
+            time.sleep(0.5)
 
             cv.rectangle(image_np, (int(left), int(top)), (int(right), int(bottom)), (0, 0, 255), thickness=2)
 

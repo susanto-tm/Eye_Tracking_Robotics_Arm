@@ -232,9 +232,9 @@ uint16_t gripper_deg(int degree) {
 }
 
 void initializeStart(int &xCoord, int &yCoord, int &wCoord, int &zCoord) {
-  xCoord = 130;
-  yCoord = 15;
-  zCoord = 133;
+  xCoord = 100;
+  yCoord = 10;
+  zCoord = 150;
 
   fabrik2D.solve2(xCoord, yCoord, zCoord, lengths);
 
@@ -257,15 +257,21 @@ void initializeStart(int &xCoord, int &yCoord, int &wCoord, int &zCoord) {
 
 void moveArm() {
   // Serial.println("Coordinates received and processing...");
-  int y = 15;
+  int y = 10;
   
   // Change xMinCoord and xMaxCoord **Z axis change on robot** to calibrated locations on the actual robot using forward kinematics to find them
   int xCalibrated = map(xData, xMin, xMax, xMinCoord, xMaxCoord);
 
+  Serial.print("Calibrated X is: ");
+  Serial.println(xCalibrated);
+
   // Change yMinCoord and yMaxCoord **X axis change on robot** to calibrated locations on the actual robot using forward kinematics to find them
   int yCalibrated = map(yData, yMin, yMax, yMinCoord, yMaxCoord);
+
+  Serial.print("Calibrated Y is: ");
+  Serial.println(yCalibrated);
   
-  fabrik2D.solve2(yCalibrated, y, xCalibrated, lengths);
+  fabrik2D.solve2(200, y, xCalibrated, lengths);
 
   int tiltAngle = fabrik2D.getAngle(0) * 57296/1000;
   int elbowAngle = fabrik2D.getAngle(1) * 57296/1000;
