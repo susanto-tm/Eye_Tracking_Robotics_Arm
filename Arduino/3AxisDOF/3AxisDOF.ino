@@ -95,26 +95,6 @@ void loop() {
   }
 }
 
-void showCalibrationData() {
-  Serial.println("Calibration results");
-  
-  Serial.print("xMin is: ");
-  Serial.println(xMin);
-
-  Serial.print("xMax is: ");
-  Serial.println(xMax);
-
-  Serial.print("yMin is: ");
-  Serial.println(yMin);
-
-  Serial.print("yMax is: ");
-  Serial.println(yMax);
-
-  Serial.println("End");
-
-  calibrationState = 2;
-}
-
 void receiveStartEndMarker() {
   static boolean receiveProgress = false;
   static byte ndx = 0;
@@ -182,6 +162,26 @@ void parseData() {
   yData = atoi(strtokIndx); // takes the continued string and changes it into int for second coordinate split
 }
 
+void showCalibrationData() {
+  Serial.println("Calibration results");
+  
+  Serial.print("xMin is: ");
+  Serial.println(xMin);
+
+  Serial.print("xMax is: ");
+  Serial.println(xMax);
+
+  Serial.print("yMin is: ");
+  Serial.println(yMin);
+
+  Serial.print("yMax is: ");
+  Serial.println(yMax);
+
+  Serial.println("End");
+
+  calibrationState = 2;
+}
+
 void showData() {
   Serial.print("X Coordinate: ");
   Serial.println(xData);
@@ -189,7 +189,6 @@ void showData() {
   Serial.print("Y Coordinate: ");
   Serial.println(yData);
 }
-
 
 uint16_t tilt_deg(int degree) {
   uint16_t pulse = map(degree, 0, 180, SERVOMIN, SERVOMAX);
