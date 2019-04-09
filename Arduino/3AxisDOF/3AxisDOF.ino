@@ -25,6 +25,10 @@ Fabrik2D fabrik2D(4, lengths);
 int state = 0;
 int prevTiltAngle, prevElbAngle, prevWriAngle, prevBaseAngle;
 
+// variables for gripping object
+int grip_state = 0;
+int grip_count = 0;
+
 // initialize PWMServoDriver library
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
@@ -49,7 +53,6 @@ void setup() {
   pwm.setPWMFreq(60);
 
   delay(5000);
-
 }
 
 void loop() {
@@ -141,6 +144,10 @@ void receiveStartEndMarker() {
     else if (rc == startMarker) {
       receiveProgress = true; // skips the startMarker when collecting bytes begins
     }
+    else if (rc == 'G') {
+      Serial.println("Running Gripper");
+      gripperObjectPickup();
+    }
   }
 }
 
@@ -216,10 +223,18 @@ uint16_t base_deg(int degree) {
   return pulse;
 }
 
+uint16_t gripper_deg(int degree) {
+  const int MIN = 200;
+  const int MAX = 290;
+  uint16_t pulse = map(degree, 180, 0, MIN, MAX); // 180 is open, 0 is close
+
+  return pulse;
+}
+
 void initializeStart(int &xCoord, int &yCoord, int &wCoord, int &zCoord) {
-  xCoord = 150;
-  yCoord = 10;
-  zCoord = 50;
+  xCoord = 130;
+  yCoord = 15;
+  zCoord = 133;
 
   fabrik2D.solve2(xCoord, yCoord, zCoord, lengths);
 
@@ -232,6 +247,7 @@ void initializeStart(int &xCoord, int &yCoord, int &wCoord, int &zCoord) {
   pwm.setPWM(1, 0, elbow_deg(eAngle));
   pwm.setPWM(2, 0, wrist_deg(wAngle));
   pwm.setPWM(3, 0, base_deg(bAngle));
+  pwm.setPWM(4, 0, gripper_deg(0)); // gripper closed
 
   xCoord = tAngle;
   yCoord = eAngle;
@@ -241,7 +257,7 @@ void initializeStart(int &xCoord, int &yCoord, int &wCoord, int &zCoord) {
 
 void moveArm() {
   // Serial.println("Coordinates received and processing...");
-  int y = 10;
+  int y = 15;
   
   // Change xMinCoord and xMaxCoord **Z axis change on robot** to calibrated locations on the actual robot using forward kinematics to find them
   int xCalibrated = map(xData, xMin, xMax, xMinCoord, xMaxCoord);
@@ -322,4 +338,55 @@ void moveArm() {
   prevWriAngle = wristAngle;
   prevBaseAngle = baseAngle;
   
+}
+
+void gripperObjectPickup() {
+  // If gripper grabs object
+  if (grip_count == 0) {
+    if (grip_state == 0) {
+      pwm.setPWM(4, 0, gripper_deg(180)); // open gripper
+      delay(200);
+      pwm.setPWM(0, 0, tilt_deg(100));
+      delay(200);
+      pwm.setPWM(1, 0, elbow_deg(-45));
+      delay(200);
+      pwm.setPWM(2, 0, wrist_deg(45));
+      delay(1000);
+
+      grip_state = 1;
+    }
+
+    if (grip_state == 1) {
+      pwm.setPWM(4, 0, gripper_deg(0)); // close gripper
+      grip_state = 2;
+      delay(2000);
+    }
+
+    Serial.println("Object picked up successful");
+    
+    prevTiltAngle = 100;
+    prevElbAngle = -45;
+    prevWriAngle = 45;
+
+    grip_count = 1;
+  }
+
+  else if (grip_count == 1) {
+    if (grip_state == 2) {
+      pwm.setPWM(1, 0, elbow_deg(-45));
+      delay(1000);
+      pwm.setPWM(4, 0, gripper_deg(180)); // open gripper
+      delay(1000);
+      pwm.setPWM(1, 0, elbow_deg(-30));
+      delay(2000);
+    }
+
+    Serial.println("Object dropped");
+
+    pwm.setPWM(4, 0, gripper_deg(0)); // close gripper
+    prevElbAngle = -30;
+    grip_state = 0;
+    grip_count = 0;
+    
+  }
 }

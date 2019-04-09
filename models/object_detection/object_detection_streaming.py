@@ -87,6 +87,7 @@ calibration_stage = 0
 calibration_state = 0
 save_calibration = []
 calibration_count = 0
+grip_count = 0
 
 with detection_graph.as_default():
     with tf.Session(graph=detection_graph) as sess:
@@ -140,7 +141,9 @@ with detection_graph.as_default():
             ycenter = (int(top) + int(bottom)) / 2
 
             # Append midpoint coordinates to front of list
-            coord.insert(0, [int(xcenter), int(ycenter)])
+            # Ignore coordinate <0, 0> for non-existing bounding box or a blink recorded by the frame
+            if xcenter and ycenter != 0:
+                coord.insert(0, [int(xcenter), int(ycenter)])
 
             # Concatenate string of integers from each sub-array into <xxx, xxx>, using bytes() to send to serial
             # then parse data in Arduino
@@ -177,8 +180,8 @@ with detection_graph.as_default():
                 ser.write(bytes(serialFormat, 'utf-8'))
                 print(ser.readline())
                 print(coord)
-            # TODO <0, 0,> exception in Arduino for blinking to be ignored
-            # Truncate last element if length is > 5
+
+            # Truncate last element if length is > 5. To clear up buffer and memory.
             if len(coord) > 5:
                 coord.pop()
 
@@ -199,6 +202,15 @@ with detection_graph.as_default():
                 if calibration_state == 0:
                     calibration_state, calibration_stage, calibration_count = 0, 0, 0
                     save_calibration = []
+
+            elif cv.waitKey(25) & 0xFF == ord('p'):
+                ser.write(b'G')
+
+                while grip_count < 3:
+                    print(ser.readline())
+                    grip_count += 1
+
+                grip_count = 0
 
             elif cv.waitKey(25) & 0xFF == ord('q'):
                 cv.destroyAllWindows()
