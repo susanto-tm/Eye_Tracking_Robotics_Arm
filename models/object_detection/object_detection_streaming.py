@@ -212,6 +212,9 @@ with detection_graph.as_default():
 
                 grip_count = 0
 
+            # TODO -- implement a pause button to stop sending bytes (when switching people) do different Arduino
+            # TODO -- Y and Z for calibrated and only 2D IK solving. Maybe also reset in the middle and base rotation by button if 2D
+
             elif cv.waitKey(25) & 0xFF == ord('q'):
                 cv.destroyAllWindows()
                 fps.stop()

@@ -52,6 +52,8 @@ void setup() {
   pwm.begin();
   pwm.setPWMFreq(60);
 
+  fabrik2D.setTolerance(0.5);
+
   delay(5000);
 }
 
@@ -270,7 +272,7 @@ void moveArm() {
   Serial.print("Calibrated Y is: ");
   Serial.println(yCalibrated);
   
-  fabrik2D.solve2(200, y, xCalibrated, lengths);
+  fabrik2D.solve2(yCalibrated, y, xCalibrated, lengths);
 
   int tiltAngle = fabrik2D.getAngle(0) * 57296/1000;
   int elbowAngle = fabrik2D.getAngle(1) * 57296/1000;

@@ -25,10 +25,12 @@ void setup() {
   pwm.begin();
   pwm.setPWMFreq(60);
   
-//  pwm.setPWM(0, 0, tilt_deg(90));
-//  pwm.setPWM(1, 0, elbow_deg(-90));
-//  pwm.setPWM(1, 0, elbow_deg(-20));
-//  pwm.setPWM(4, 0, gripper_deg(180));
+  pwm.setPWM(0, 0, tilt_deg(90));
+  pwm.setPWM(1, 0, elbow_deg(-90));
+  pwm.setPWM(1, 0, elbow_deg(-20));
+  pwm.setPWM(4, 0, gripper_deg(180));
+
+  fabrik2D.setTolerance(0.5);
 
   delay(1000);
 
@@ -118,13 +120,13 @@ void loop() {
 //  Serial.print("Check Z: ");
 //  Serial.println(zCoord);
 //  if (grip_state == 0) {
-//    pwm.setPWM(0, 0, tilt_deg(100));
+//    pwm.setPWM(0, 0, tilt_deg(70));
 //    delay(200);
 //    pwm.setPWM(1, 0, elbow_deg(-45));
 //    delay(200);
-//    pwm.setPWM(2, 0, wrist_deg(45));
+//    pwm.setPWM(2, 0, wrist_deg(35));
 //    delay(200);
-//    pwm.setPWM(3, 0, base_deg(45));
+//    pwm.setPWM(3, 0, base_deg(90));
 //    delay(1000);
 //
 //    grip_state = 1;
@@ -137,10 +139,84 @@ void loop() {
 //  }
 //  else if (grip_state == 2) {
 //    pwm.setPWM(1, 0, elbow_deg(-20));
+//    delay(2000);
+//    pwm.setPWM(0, 0, tilt_deg(80));
+//    pwm.setPWM(1, 0, elbow_deg(-40));
+//    delay(2000);
+//    pwm.setPWM(4, 0, gripper_deg(180));
+//    delay(2000);
+//
+//    grip_state = 3;
+//  }
+//  else if (grip_state == 3) {
+//    pwm.setPWM(4, 0, gripper_deg(0));
+//    delay(2000);
+//    grip_state = 2;
 //  }
 
-  pwm.setPWM(4, 0, 200);
-  delay(1000);
+//  pwm.setPWM(0, 0, tilt_deg(100));
+//  pwm.setPWM(1, 0, elbow_deg(-80));
+//  pwm.setPWM(2, 0, wrist_deg(45));
+//  pwm.setPWM(3, 0, base_deg(90));
+//  pwm.setPWM(4, 0, gripper_deg(90));
+
+  fabrik2D.solve2(150, 50, 30, -M_PI/4, lengths);
+
+  Serial.println("Z at 0");
+
+  int tAngle = fabrik2D.getAngle(0) * 57296/1000;
+  int eAngle = fabrik2D.getAngle(1) * 57296/1000;
+  int wAngle = fabrik2D.getAngle(2) * -57296/1000;
+  int bAngle = fabrik2D.getBaseAngle()* 57296/1000;
+
+  int xC = fabrik2D.getX(3);
+  int yC = fabrik2D.getY(3);
+  int zC = fabrik2D.getZ();
+
+  Serial.print("X is: ");
+  Serial.println(xC);
+
+  Serial.print("Y is: ");
+  Serial.println(yC);
+
+  Serial.print("Z is: ");
+  Serial.println(zC);
+
+  pwm.setPWM(0, 0, tilt_deg(tAngle));
+  pwm.setPWM(1, 0, elbow_deg(eAngle));
+  pwm.setPWM(2, 0, wrist_deg(wAngle));
+  pwm.setPWM(3, 0, base_deg(bAngle));
+
+  delay(2000);
+
+  fabrik2D.solve2(200, 150, 30, -M_PI/4, lengths);
+
+  Serial.println("Z at 50");
+
+  tAngle = fabrik2D.getAngle(0) * 57296/1000;
+  eAngle = fabrik2D.getAngle(1) * 57296/1000;
+  wAngle = fabrik2D.getAngle(2) * -57296/1000;
+  bAngle = fabrik2D.getBaseAngle() * 57296/1000;
+
+  xC = fabrik2D.getX(3);
+  yC = fabrik2D.getY(3);
+  zC = fabrik2D.getZ();
+
+  Serial.print("X is: ");
+  Serial.println(xC);
+
+  Serial.print("Y is: ");
+  Serial.println(yC);
+
+  Serial.print("Z is: ");
+  Serial.println(zC);
+
+  pwm.setPWM(0, 0, tilt_deg(tAngle));
+  pwm.setPWM(1, 0, elbow_deg(eAngle));
+  pwm.setPWM(2, 0, wrist_deg(wAngle));
+  pwm.setPWM(3, 0, base_deg(bAngle));
+
+  delay(2000);
 //  pwm.setPWM(0, 0, tilt_deg(90));
 //  pwm.setPWM(2, 0, wrist_deg(0));
   
