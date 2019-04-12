@@ -10,12 +10,12 @@ int xMin, xMax, yMin, yMax;
 int calibrationState = 0;
 
 // xMin and xMax are defined as maximum z coordinates in arm
-int xMinCoord = 0;
-int xMaxCoord = 265;
+int xMinCoord = 20;
+int xMaxCoord = 250;
 
 // yMin and yMax are defined as maximum x coordinates in arm
-int yMinCoord = 150;
-int yMaxCoord = 410;
+int yMinCoord = 15;
+int yMaxCoord = 200;
 
 // initialize length of joins for arm
 int lengths[] = {100, 130, 180};
@@ -126,6 +126,10 @@ void receiveStartEndMarker() {
     else if (rc == startMarker) {
       receiveProgress = true; // skips the startMarker when collecting bytes begins
     }
+    else if (rc == 'R') {
+      Serial.println("Resetting Calibration");
+      resetCalibrationStates();
+    }
     else if (rc == 'G') {
       Serial.println("Running Gripper");
       gripperObjectPickup();
@@ -134,6 +138,15 @@ void receiveStartEndMarker() {
       Serial.println("Pausing or Running Arm");
     }
   }
+}
+
+void resetCalibrationStates() {
+  state = 1;
+  calibrationState = 1;
+  newData = false;
+  
+  Serial.println("Calibration reset complete...");
+  delay(1000);
 }
 
 void parseCalibrationData() {
@@ -275,7 +288,7 @@ void moveArm() {
   Serial.print("Calibrated Y is: ");
   Serial.println(yCalibrated);
   
-  fabrik2D.solve2(yCalibrated, y, xCalibrated, lengths);
+  fabrik2D.solve2(200, yCalibrated, xCalibrated, lengths);
 
   int tiltAngle = fabrik2D.getAngle(0) * 57296/1000;
   int elbowAngle = fabrik2D.getAngle(1) * 57296/1000;

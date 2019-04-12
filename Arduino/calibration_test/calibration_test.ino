@@ -39,58 +39,61 @@ void loop() {
   int tAngle, eAngle, wAngle, bAngle;
   
   // put your main code here, to run repeatedly:
-  if (grip_state == 0) {
-    fabrik2D.solve2(150, 170, 200, lengths);
-  
-    tAngle = fabrik2D.getAngle(0) * 57926/1000;
-    eAngle = fabrik2D.getAngle(1) * 57296/1000;
-    wAngle = fabrik2D.getAngle(2) * -57296/1000;
-    bAngle = fabrik2D.getBaseAngle();
-  
-    pwm.setPWM(0, 0, tilt_deg(tAngle));
-    pwm.setPWM(1, 0, elbow_deg(eAngle));
-    pwm.setPWM(2, 0, wrist_deg(wAngle));
-    pwm.setPWM(3, 0, base_deg(90));
+//  if (grip_state == 0) {
+//    fabrik2D.solve2(150, 170, 200, lengths);
+//  
+//    tAngle = fabrik2D.getAngle(0) * 57926/1000;
+//    eAngle = fabrik2D.getAngle(1) * 57296/1000;
+//    wAngle = fabrik2D.getAngle(2) * -57296/1000;
+//    bAngle = fabrik2D.getBaseAngle();
+//  
+//    pwm.setPWM(0, 0, tilt_deg(tAngle));
+//    pwm.setPWM(1, 0, elbow_deg(eAngle));
+//    pwm.setPWM(2, 0, wrist_deg(wAngle));
+//    pwm.setPWM(3, 0, base_deg(90));
+//
+//    grip_state = 0;
+//    delay(2000);
+//  }
+//  
+//  else if (grip_state == 1) {
+//    pwm.setPWM(0, 0, tilt_deg(100));
+//    delay(200);
+//    pwm.setPWM(1, 0, elbow_deg(-51));
+//    delay(200);
+//    pwm.setPWM(2, 0, wrist_deg(45));
+//    delay(200);
+//    pwm.setPWM(3, 0, base_deg(90));
+//    delay(1000);
+//
+//    grip_state = 2;
+//  }
+//
+//  else if (grip_state == 2) {
+//    pwm.setPWM(4, 0, gripper_deg(0));
+//    grip_state = 3;
+//    delay(2000);
+//  }
+//  else if (grip_state == 3) {
+//    pwm.setPWM(1, 0, elbow_deg(-20));
+//    delay(1000);
+//    pwm.setPWM(0, 0, tilt_deg(100));
+//    pwm.setPWM(1, 0, elbow_deg(-51));
+//    delay(2000);
+//    pwm.setPWM(4, 0, gripper_deg(180));
+//    delay(1000);
+//    grip_state = 4;
+//  }
+//  else if (grip_state == 4) {
+//    pwm.setPWM(4, 0, gripper_deg(0));
+//    delay(2000);
+//    grip_state = 3;
+//  }
 
-    grip_state = 0;
-    delay(2000);
-  }
-  
-  else if (grip_state == 1) {
-    pwm.setPWM(0, 0, tilt_deg(100));
-    delay(200);
-    pwm.setPWM(1, 0, elbow_deg(-51));
-    delay(200);
-    pwm.setPWM(2, 0, wrist_deg(45));
-    delay(200);
-    pwm.setPWM(3, 0, base_deg(90));
-    delay(1000);
+  int mapped = map(215, 277, 160, 15, 200);
+  Serial.println(mapped);
 
-    grip_state = 2;
-  }
-
-  else if (grip_state == 2) {
-    pwm.setPWM(4, 0, gripper_deg(0));
-    grip_state = 3;
-    delay(2000);
-  }
-  else if (grip_state == 3) {
-    pwm.setPWM(1, 0, elbow_deg(-20));
-    delay(1000);
-    pwm.setPWM(0, 0, tilt_deg(100));
-    pwm.setPWM(1, 0, elbow_deg(-51));
-    delay(2000);
-    pwm.setPWM(4, 0, gripper_deg(180));
-    delay(1000);
-    grip_state = 4;
-  }
-  else if (grip_state == 4) {
-    pwm.setPWM(4, 0, gripper_deg(0));
-    delay(2000);
-    grip_state = 3;
-  }
-
-  delay(1000);
+  delay(10000);
   
 }
 
