@@ -203,7 +203,17 @@ with detection_graph.as_default():
                     calibration_state, calibration_stage, calibration_count = 0, 0, 0
                     save_calibration = []
 
-            elif cv.waitKey(25) & 0xFF == ord('p'):
+                elif calibration_state == 1:
+                    ser.write(b'R')
+
+                    while calibration_count < 3:
+                        print(ser.readline())
+                        calibration_count += 1
+
+                    calibration_state, calibration_stage, calibration_count = 0, 0, 0
+                    save_calibration = []
+
+            elif cv.waitKey(25) & 0xFF == ord('g'):
                 ser.write(b'G')
 
                 while grip_count < 3:
@@ -211,6 +221,13 @@ with detection_graph.as_default():
                     grip_count += 1
 
                 grip_count = 0
+
+            elif cv.waitKey(25) & 0xFF == ord('p'):
+                if calibration_state == 1:
+                    calibration_state = 2
+
+                elif calibration_state == 2:
+                    calibration_state = 1
 
             # TODO -- implement a pause button to stop sending bytes (when switching people) do different Arduino
             # TODO -- Y and Z for calibrated and only 2D IK solving. Maybe also reset in the middle and base rotation by button if 2D
