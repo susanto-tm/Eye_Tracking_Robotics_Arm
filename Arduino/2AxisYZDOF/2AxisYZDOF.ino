@@ -9,13 +9,13 @@
 int xMin, xMax, yMin, yMax;
 int calibrationState = 0;
 
-// xMin and xMax are defined as maximum z coordinates in arm
-int xMinCoord = 200;
-int xMaxCoord = 360;
+// xMin and xMax are defined as maximum z coordinates in arm represented as base angle
+int xMinCoord = 5; 
+int xMaxCoord = 175;
 
-// yMin and yMax are defined as maximum x coordinates in arm
-int yMinCoord = 175;
-int yMaxCoord = 290;
+// yMin and yMax are defined as maximum y coordinates in arm
+int yMinCoord = 200;  // 175 for y of arm
+int yMaxCoord = 360;  // 290 for y of arm
 
 // initialize length of joins for arm
 int lengths[] = {100, 130, 180};
@@ -69,8 +69,6 @@ void loop() {
     Serial.println("Initialized");
 
     delay(5000);
-
-    gripperObjectPickup();
     
     state = 1;
     calibrationState = 1;
@@ -136,14 +134,6 @@ void receiveStartEndMarker() {
     }
     else if (rc == 'P') {
       Serial.println("Pausing or Running Arm");
-    }
-    else if (rc == 'D') {
-      prevBaseAngle = prevBaseAngle + 5;
-      rotateBaseAngle(rc, prevBaseAngle);
-    }
-    else if (rc == 'A') {
-      prevBaseAngle = prevBaseAngle - 5;
-      rotateBaseAngle(rc, prevBaseAngle);
     }
   }
 }
@@ -257,8 +247,6 @@ uint16_t gripper_deg(int degree) {
 }
 
 void initializeStart(int &xCoord, int &yCoord, int &wCoord, int &zCoord) {
-  xCoord = 200;
-  yCoord = 180;
 
   fabrik2D.solve(xCoord, yCoord, lengths);
 
@@ -294,16 +282,14 @@ void moveArm() {
   Serial.print("Calibrated Y is: ");
   Serial.println(yCalibrated);
   
-  fabrik2D.solve(xCalibrated, yCalibrated, -M_PI/4.0, lengths);
+  fabrik2D.solve(yCalibrated, 200, lengths);
 
   int tiltAngle = fabrik2D.getAngle(0) * 57296/1000;
   int elbowAngle = fabrik2D.getAngle(1) * 57296/1000;
   int wristAngle = fabrik2D.getAngle(2) * -57296/1000; // turn negative to positive since it is moving anti-clockwise already
+  int baseAngle = xCalibrated;
 
-  Serial.print("Base Angle is: ");
-  Serial.println(prevBaseAngle);
-
-  for (int i=0; i < max(max(tiltAngle, elbowAngle), wristAngle); i++) {
+  for (int i=0; i < max(max(tiltAngle, elbowAngle), max(wristAngle, baseAngle)); i++) {
     //Tilt Angle always positive
     // If target angle is greater than current angle the increase current angle
     if (tiltAngle > prevTiltAngle) {
@@ -345,12 +331,26 @@ void moveArm() {
       pwm.setPWM(2, 0, wrist_deg(prevWriAngle));
       delay(10);
     }
+
+    // Base Angle
+    // If the target angle is greater than the current angle then increase current angle
+    if (baseAngle > prevBaseAngle) {
+      prevBaseAngle++;
+      pwm.setPWM(3, 0, base_deg(prevBaseAngle));
+      delay(10);
+    }
+    // else if the target angle is less than the current angle then decrease current angle
+    else if (baseAngle < prevBaseAngle) {
+      prevBaseAngle--;
+      pwm.setPWM(3, 0, base_deg(prevBaseAngle));
+      delay(10);
+    }
   }
 
   prevTiltAngle = tiltAngle;
   prevElbAngle = elbowAngle;
   prevWriAngle = wristAngle;
-  
+  prevBaseAngle = baseAngle;
 }
 
 void rotateBaseAngle(char baseDirection, int bAngle) {

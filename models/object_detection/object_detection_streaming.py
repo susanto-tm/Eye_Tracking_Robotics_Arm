@@ -5,13 +5,14 @@ import tensorflow as tf
 import serial
 import msvcrt
 
-from imutils.video import FileVideoStream
+from imutils.video import WebcamVideoStream
 from imutils.video import FPS
 import imutils
 import time
 
 import cv2 as cv
 cap = cv.VideoCapture(0 + cv.CAP_DSHOW)
+# cap = WebcamVideoStream(src=0).start()
 fps = FPS().start()
 
 print("[INFO] Opening serial port...")
@@ -93,6 +94,7 @@ with detection_graph.as_default():
     with tf.Session(graph=detection_graph) as sess:
         print("[INFO] Running Object Detector...")
         while True:
+            # image_np = cap.read()
             ret, image_np = cap.read()
             image_np = cv.flip(image_np, 0)
             # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
@@ -197,7 +199,7 @@ with detection_graph.as_default():
             # for i in range(len(coord) - 1):
             #    cv.line(image_np, (coord[i][0], coord[i][1]), (coord[i+1][0], coord[i+1][1]), (0, 0, 255), thickness=2)
 
-            cv.imshow('object_detection', cv.resize(image_np, (800, 600)))
+            cv.imshow('object_detection', imutils.resize(image_np, width=800, height=600))  # cv.resize(image_np, (800, 600)))
             if cv.waitKey(25) & 0xFF == ord('r'):
                 if calibration_state == 0:
                     calibration_state, calibration_stage, calibration_count = 0, 0, 0
@@ -212,14 +214,20 @@ with detection_graph.as_default():
 
                 grip_count = 0
 
+            elif cv.waitKey(25) & 0xFF == ord('d'):
+                ser.write(b'D')
+
+            elif cv.waitKey(25) & 0xFF == ord('a'):
+                ser.write(b'A')
+
+                time.sleep(0.01)
+
             elif cv.waitKey(25) & 0xFF == ord('p'):
                 if calibration_state == 1:
                     calibration_state = 2
 
                 elif calibration_state == 2:
                     calibration_state = 1
-
-            # TODO -- Y and Z for calibrated and only 2D IK solving. Maybe also reset in the middle and base rotation by button if 2D
 
             elif cv.waitKey(25) & 0xFF == ord('q'):
                 cv.destroyAllWindows()

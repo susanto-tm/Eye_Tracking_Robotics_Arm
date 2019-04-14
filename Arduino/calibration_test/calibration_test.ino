@@ -25,7 +25,8 @@ void setup() {
   pwm.begin();
   pwm.setPWMFreq(60);
   
-  pwm.setPWM(4, 0, gripper_deg(180));
+//  pwm.setPWM(4, 0, gripper_deg(180));
+pwm.setPWM(3, 0, base_deg(90));
 
   fabrik2D.setTolerance(0.5);
 
@@ -90,10 +91,15 @@ void loop() {
 //    grip_state = 3;
 //  }
 
-  int mapped = map(215, 277, 160, 15, 200);
-  Serial.println(mapped);
+  fabrik2D.solve(300, 170, lengths);
 
-  delay(10000);
+  tAngle = fabrik2D.getAngle(0) * 57296/1000;
+  eAngle = fabrik2D.getAngle(1) * 57296/1000;
+  wAngle = fabrik2D.getAngle(2) * -57296/1000;
+
+  pwm.setPWM(0, 0, tilt_deg(tAngle));
+  pwm.setPWM(1, 0, elbow_deg(eAngle));
+  pwm.setPWM(2, 0, wrist_deg(wAngle));
   
 }
 
