@@ -44,6 +44,17 @@ int yData = 0;
 // Indicate if coordinates are being processed
 boolean newData = false;
 
+// Reset calibration states and skip initialization
+void resetCalibrationStates() {
+  pwm.setPWM(3, 0, base_deg(90));
+  state = 1;
+  calibrationState = 1;
+  newData = false;
+  
+  Serial.println("Calibration reset complete...");
+  delay(1000);
+}
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(19200);
@@ -135,16 +146,11 @@ void receiveStartEndMarker() {
     else if (rc == 'P') {
       Serial.println("Pausing or Running Arm");
     }
+    else if (rc == 'R') {
+      Serial.println("Resetting calibration states...");
+      resetCalibrationStates();
+    }
   }
-}
-
-void resetCalibrationStates() {
-  state = 1;
-  calibrationState = 1;
-  newData = false;
-  
-  Serial.println("Calibration reset complete...");
-  delay(1000);
 }
 
 void parseCalibrationData() {

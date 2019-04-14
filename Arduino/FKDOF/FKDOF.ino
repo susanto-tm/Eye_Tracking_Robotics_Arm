@@ -10,16 +10,19 @@ int bMax = 175;
 
 // Shoulder Angle Constraints
 int tMin = 120;
-int tMax = 10;
+int tMax = 60;
 
 // Elbow Angle Constraints
 int eMin = -70;
-int eMax = -5;
+int eMax = -30;
 
 // Wrist Angle Constraints
 int wMin = 60;
-int wMax = 10;
+int wMax = 30;
 
+// calibrate coordinates for arm based on eye detection
+int xMin, xMax, yMin, yMax;
+int calibrationState = 0;
 
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 
@@ -43,10 +46,12 @@ int yData = 0;
 // Indicate if coordinates are being processed
 boolean newData = false;
 
+
 // Reset during calibrationState = 2
 void resetCalibrationStates() {
-  state = 0;
-  calibrationState = 0;
+  pwm.setPWM(3, 0, base_deg(90));
+  state = 1;
+  calibrationState = 1;
   newData = false;
   
   Serial.println("Calibration reset complete...");
@@ -188,6 +193,10 @@ void receiveStartEndMarker() {
     else if (rc == 'P') {
       Serial.println("Pausing or Running Arm");
     }
+    else if (rc == 'R') {
+      Serial.println("Resetting calibration states...");
+      resetCalibrationStates();
+    }
   }
 }
 
@@ -295,8 +304,63 @@ void moveArm() {
     else if (baseAngle < prevBaseAngle) {
       prevBaseAngle--;
       pwm.setPWM(3, 0, base_deg(prevBaseAngle));
+    } 
+  }
+
+  prevTiltAngle = tiltAngle;
+  prevElbAngle = elbowAngle;
+  prevWriAngle = wristAngle;
+  prevBaseAngle = baseAngle;
+  
+}
+
+void gripperObjectPickup() {
+  // If gripper grabs object
+  if (grip_count == 0) {
+    if (grip_state == 0) {
+      pwm.setPWM(4, 0, gripper_deg(180)); // open gripper
+      delay(200);
+      pwm.setPWM(0, 0, tilt_deg(100));
+      delay(200);
+      pwm.setPWM(1, 0, elbow_deg(-45));
+      delay(200);
+      pwm.setPWM(2, 0, wrist_deg(45));
+      delay(2000);
+
+      grip_state = 1;
     }
+
+    if (grip_state == 1) {
+      pwm.setPWM(4, 0, gripper_deg(0)); // close gripper
+      grip_state = 2;
+      delay(2000);
+    }
+
+    Serial.println("Object picked up successful");
+    
+    prevTiltAngle = 100;
+    prevElbAngle = -45;
+    prevWriAngle = 45;
+
+    grip_count = 1;
+  }
+
+  else if (grip_count == 1) {
+    if (grip_state == 2) {
+      pwm.setPWM(1, 0, elbow_deg(-45));
+      delay(1000);
+      pwm.setPWM(4, 0, gripper_deg(180)); // open gripper
+      delay(1000);
+      pwm.setPWM(1, 0, elbow_deg(-30));
+      delay(2000);
+    }
+
+    Serial.println("Object dropped");
+
+    pwm.setPWM(4, 0, gripper_deg(0)); // close gripper
+    prevElbAngle = -30;
+    grip_state = 0;
+    grip_count = 0;
     
   }
-  
 }

@@ -201,9 +201,20 @@ with detection_graph.as_default():
 
             cv.imshow('object_detection', imutils.resize(image_np, width=800, height=600))  # cv.resize(image_np, (800, 600)))
             if cv.waitKey(25) & 0xFF == ord('r'):
+                calibration_state, calibration_stage, calibration_count = 0, 0, 0
+                save_calibration = []
+                reset_count = 0
+
                 if calibration_state == 0:
-                    calibration_state, calibration_stage, calibration_count = 0, 0, 0
-                    save_calibration = []
+                    ser.write(b'R')
+
+                    while reset_count < 2:
+                        print(ser.readline())
+                        reset_count += 1
+
+                # if calibration_state == 0:
+                #     calibration_state, calibration_stage, calibration_count = 0, 0, 0
+                #     save_calibration = []
 
             elif cv.waitKey(25) & 0xFF == ord('g'):
                 ser.write(b'G')
