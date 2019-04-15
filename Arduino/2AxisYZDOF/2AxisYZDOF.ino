@@ -47,8 +47,8 @@ boolean newData = false;
 // Reset calibration states and skip initialization
 void resetCalibrationStates() {
   pwm.setPWM(3, 0, base_deg(90));
-  state = 1;
-  calibrationState = 1;
+  state = 0;
+  calibrationState = 0;
   newData = false;
   
   Serial.println("Calibration reset complete...");
@@ -279,14 +279,14 @@ void moveArm() {
   // Change xMinCoord and xMaxCoord **Z axis change on robot** to calibrated locations on the actual robot using forward kinematics to find them
   int xCalibrated = map(xData, xMin, xMax, xMinCoord, xMaxCoord);
 
-  Serial.print("Calibrated X is: ");
-  Serial.println(xCalibrated);
+//  Serial.print("Calibrated X is: ");
+//  Serial.println(xCalibrated);
 
   // Change yMinCoord and yMaxCoord **X axis change on robot** to calibrated locations on the actual robot using forward kinematics to find them
   int yCalibrated = map(yData, yMin, yMax, yMinCoord, yMaxCoord);
 
-  Serial.print("Calibrated Y is: ");
-  Serial.println(yCalibrated);
+//  Serial.print("Calibrated Y is: ");
+//  Serial.println(yCalibrated);
   
   fabrik2D.solve(yCalibrated, 200, lengths);
 
@@ -374,7 +374,7 @@ void gripperObjectPickup() {
     if (grip_state == 0) {
       pwm.setPWM(4, 0, gripper_deg(180)); // open gripper
       delay(200);
-      pwm.setPWM(0, 0, tilt_deg(100));
+      pwm.setPWM(0, 0, tilt_deg(90));
       delay(200);
       pwm.setPWM(1, 0, elbow_deg(-45));
       delay(200);
@@ -385,6 +385,8 @@ void gripperObjectPickup() {
     }
 
     if (grip_state == 1) {
+      pwm.setPWM(0, 0, tilt_deg(85));
+      delay(2000);
       pwm.setPWM(4, 0, gripper_deg(0)); // close gripper
       grip_state = 2;
       delay(2000);
@@ -392,7 +394,7 @@ void gripperObjectPickup() {
 
     Serial.println("Object picked up successful");
     
-    prevTiltAngle = 100;
+    prevTiltAngle = 85;
     prevElbAngle = -45;
     prevWriAngle = 45;
 
@@ -401,7 +403,7 @@ void gripperObjectPickup() {
 
   else if (grip_count == 1) {
     if (grip_state == 2) {
-      pwm.setPWM(1, 0, elbow_deg(-45));
+      pwm.setPWM(1, 0, elbow_deg(-55));
       delay(1000);
       pwm.setPWM(4, 0, gripper_deg(180)); // open gripper
       delay(1000);

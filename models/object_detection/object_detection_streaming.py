@@ -205,7 +205,7 @@ with detection_graph.as_default():
                 save_calibration = []
                 reset_count = 0
 
-                if calibration_state == 0:
+                if calibration_state == 1:
                     ser.write(b'R')
 
                     while reset_count < 2:

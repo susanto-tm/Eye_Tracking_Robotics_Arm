@@ -320,7 +320,7 @@ void gripperObjectPickup() {
     if (grip_state == 0) {
       pwm.setPWM(4, 0, gripper_deg(180)); // open gripper
       delay(200);
-      pwm.setPWM(0, 0, tilt_deg(100));
+      pwm.setPWM(0, 0, tilt_deg(85));
       delay(200);
       pwm.setPWM(1, 0, elbow_deg(-45));
       delay(200);
@@ -338,7 +338,7 @@ void gripperObjectPickup() {
 
     Serial.println("Object picked up successful");
     
-    prevTiltAngle = 100;
+    prevTiltAngle = 85;
     prevElbAngle = -45;
     prevWriAngle = 45;
 
@@ -347,7 +347,7 @@ void gripperObjectPickup() {
 
   else if (grip_count == 1) {
     if (grip_state == 2) {
-      pwm.setPWM(1, 0, elbow_deg(-45));
+      pwm.setPWM(1, 0, elbow_deg(-55));
       delay(1000);
       pwm.setPWM(4, 0, gripper_deg(180)); // open gripper
       delay(1000);
